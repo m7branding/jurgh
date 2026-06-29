@@ -1,8 +1,10 @@
+import Link from "next/link";
 import {
   getProject,
   getStatusHistory,
   getRemarks,
   getWorkLogs,
+  getExtraWork,
   getPhotos,
   getDocuments,
   vehicleTitle,
@@ -13,6 +15,8 @@ import {
   PHOTO_LABEL,
   WORK_TYPE_LABEL,
   DOCUMENT_TYPE_LABEL,
+  EXTRA_WORK_STATUS_LABEL,
+  extraWorkTone,
   formatPrice,
   formatDate,
   formatDateTime,
@@ -21,6 +25,7 @@ import {
   type PhotoLabel,
   type WorkType,
   type DocumentType,
+  type ExtraWorkStatus,
 } from "@/lib/constants";
 import {
   StatusBadge,
@@ -36,6 +41,9 @@ import {
   CompleteButton,
   RemarkForm,
   WorkLogForm,
+  ExtraWorkForm,
+  ExtraWorkRespond,
+  ExtraWorkStatusControl,
   PhotoUploadForm,
   DocumentUploadForm,
   VehiclePhotoForm,
@@ -68,12 +76,13 @@ export async function ProjectDetail({
   const isStaff = mode !== "klant";
   const isAdmin = mode === "admin";
 
-  const [history, remarks, photos, documents, workLogs] = await Promise.all([
+  const [history, remarks, photos, documents, workLogs, extraWork] = await Promise.all([
     getStatusHistory(projectId),
     getRemarks(projectId),
     getPhotos(projectId),
     getDocuments(projectId),
     isStaff ? getWorkLogs(projectId) : Promise.resolve([] as any[]),
+    getExtraWork(projectId),
   ]);
 
   const v = project.vehicles;
@@ -163,6 +172,16 @@ export async function ProjectDetail({
             <div className="mt-6">
               <StatusProgress status={project.status as ProjectStatus} />
             </div>
+
+            <div className="mt-5">
+              <Link
+                href={`/passport/${project.vehicle_id}`}
+                target="_blank"
+                className="btn-ghost"
+              >
+                🛡️ Detailing Passport exporteren
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -223,6 +242,58 @@ export async function ProjectDetail({
             {isStaff && (
               <div className="mt-4 border-t border-jurgh-border pt-4">
                 <RemarkForm projectId={projectId} />
+              </div>
+            )}
+          </section>
+
+          {/* Meerwerk / minderwerk */}
+          <section className="card p-6">
+            <SectionTitle>Meerwerk &amp; extra werk</SectionTitle>
+            {extraWork.length === 0 ? (
+              <p className="text-sm text-jurgh-muted">
+                {isStaff
+                  ? "Nog geen meerwerk vastgelegd."
+                  : "Er is op dit moment geen meerwerk voorgesteld."}
+              </p>
+            ) : (
+              <ul className="space-y-3">
+                {extraWork.map((e: any) => (
+                  <li key={e.id} className="rounded-xl border border-jurgh-border bg-jurgh-black/40 p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-jurgh-text">{e.title}</p>
+                        {e.description && (
+                          <p className="mt-0.5 text-sm text-jurgh-muted">{e.description}</p>
+                        )}
+                        <p className="mt-1 text-xs text-jurgh-muted">
+                          {formatPrice(Number(e.price))}
+                          {Number(e.estimated_hours) > 0 ? ` · ${Number(e.estimated_hours)} u extra` : ""}
+                        </p>
+                      </div>
+                      <Badge tone={extraWorkTone(e.status as ExtraWorkStatus)}>
+                        {EXTRA_WORK_STATUS_LABEL[e.status as ExtraWorkStatus]}
+                      </Badge>
+                    </div>
+
+                    {/* Klant: accepteren/afwijzen wanneer voorgesteld */}
+                    {mode === "klant" && e.status === "voorgesteld" && (
+                      <div className="mt-3 border-t border-jurgh-border pt-3">
+                        <ExtraWorkRespond id={e.id} projectId={projectId} />
+                      </div>
+                    )}
+                    {/* Staff: status beheren */}
+                    {isStaff && (
+                      <div className="mt-3 border-t border-jurgh-border pt-3">
+                        <ExtraWorkStatusControl id={e.id} projectId={projectId} current={e.status} />
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {isStaff && (
+              <div className="mt-4 border-t border-jurgh-border pt-4">
+                <ExtraWorkForm projectId={projectId} />
               </div>
             )}
           </section>
