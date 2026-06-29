@@ -99,3 +99,18 @@ body {
     linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.55) 100%),
     radial-gradient(60% 50% at 50% 45%, rgba(255, 255, 255, 0.25), transparent 70%);
 }
+
+/* ---------- Print (Detailing Passport → PDF) ---------- */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+  }
+  .passport {
+    border: none !important;
+    box-shadow: none !important;
+    max-width: 100% !important;
+  }
+}

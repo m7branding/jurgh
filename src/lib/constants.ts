@@ -138,6 +138,28 @@ export const WORK_TYPE_LABEL: Record<WorkType, string> = Object.fromEntries(
   WORK_TYPES.map((w) => [w.value, w.label])
 ) as Record<WorkType, string>;
 
+export type ExtraWorkStatus =
+  | "voorgesteld"
+  | "intern_akkoord"
+  | "klant_akkoord"
+  | "uitgevoerd"
+  | "afgewezen";
+
+export const EXTRA_WORK_STATUS_LABEL: Record<ExtraWorkStatus, string> = {
+  voorgesteld: "Voorgesteld",
+  intern_akkoord: "Intern akkoord",
+  klant_akkoord: "Klant akkoord",
+  uitgevoerd: "Uitgevoerd",
+  afgewezen: "Afgewezen",
+};
+
+export function extraWorkTone(status: ExtraWorkStatus): "green" | "red" | "amber" | "neutral" {
+  if (["klant_akkoord", "uitgevoerd"].includes(status)) return "green";
+  if (status === "afgewezen") return "red";
+  if (status === "voorgesteld") return "amber";
+  return "neutral";
+}
+
 export function formatPrice(value: number | null | undefined): string {
   if (value == null) return "—";
   return new Intl.NumberFormat("nl-NL", {

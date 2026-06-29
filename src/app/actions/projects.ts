@@ -211,6 +211,52 @@ export async function addWorkLog(_prev: unknown, formData: FormData) {
   return { ok: true };
 }
 
+// ---------- Meerwerk / minderwerk ----------
+export async function addExtraWork(_prev: unknown, formData: FormData) {
+  const profile = await staff();
+  const supabase = createClient();
+  const projectId = String(formData.get("project_id"));
+  const title = String(formData.get("title") || "").trim();
+  if (!title) return { error: "Vul een titel in." };
+
+  const { error } = await supabase.from("extra_work").insert({
+    project_id: projectId,
+    title,
+    description: String(formData.get("description") || "") || null,
+    price: formData.get("price") ? Number(formData.get("price")) : 0,
+    estimated_hours: formData.get("estimated_hours") ? Number(formData.get("estimated_hours")) : 0,
+    status: "voorgesteld",
+    created_by: profile.id,
+  });
+  if (error) return { error: error.message };
+  refresh(projectId);
+  return { ok: true };
+}
+
+// Klant accepteert of wijst af (via veilige RPC).
+export async function respondExtraWork(formData: FormData) {
+  const profile = await getSessionProfile();
+  if (!profile) throw new Error("Geen toegang");
+  const supabase = createClient();
+  const id = String(formData.get("extra_work_id"));
+  const projectId = String(formData.get("project_id"));
+  const accept = formData.get("accept") === "true";
+  const { error } = await supabase.rpc("respond_extra_work", { p_id: id, p_accept: accept });
+  if (error) throw new Error(error.message);
+  refresh(projectId);
+}
+
+// Staff werkt de status bij (bv. markeren als uitgevoerd).
+export async function setExtraWorkStatus(formData: FormData) {
+  await staff();
+  const supabase = createClient();
+  const id = String(formData.get("extra_work_id"));
+  const projectId = String(formData.get("project_id"));
+  const status = String(formData.get("status"));
+  await supabase.from("extra_work").update({ status }).eq("id", id);
+  refresh(projectId);
+}
+
 // ---------- Foto uploaden ----------
 export async function uploadPhoto(_prev: unknown, formData: FormData) {
   const profile = await staff();

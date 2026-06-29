@@ -94,6 +94,83 @@ export async function getWorkLogs(projectId: string) {
   return data ?? [];
 }
 
+export async function getExtraWork(projectId: string) {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("extra_work")
+    .select("*, profiles:created_by(full_name)")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false });
+  return data ?? [];
+}
+
+// ----- Admin overzichten -----
+
+export async function listAllWorkLogs() {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("work_logs")
+    .select(
+      "*, profiles:employee_id(full_name), projects:project_id(title, vehicles:vehicle_id(license_plate, make, model), customers:customer_id(name))"
+    )
+    .order("log_date", { ascending: false })
+    .limit(500);
+  return data ?? [];
+}
+
+export async function listVehicles() {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("vehicles")
+    .select("*, customers:customer_id(name), projects(id, status, completed_at)")
+    .order("created_at", { ascending: false });
+  return data ?? [];
+}
+
+/** Auto + afgeronde behandelingen voor het Detailing Passport. */
+export async function getVehiclePassport(vehicleId: string) {
+  const supabase = createClient();
+  const { data: vehicle } = await supabase
+    .from("vehicles")
+    .select("*, customers:customer_id(name, email, phone)")
+    .eq("id", vehicleId)
+    .maybeSingle();
+  if (!vehicle) return null;
+
+  const { data: projects } = await supabase
+    .from("projects")
+    .select("*")
+    .eq("vehicle_id", vehicleId)
+    .in("status", ["afgerond", "gefactureerd"])
+    .order("completed_at", { ascending: true });
+
+  return { vehicle, projects: projects ?? [] };
+}
+
+/** Eigen gelogde uren van een medewerker: vandaag + deze week (ma-zo). */
+export async function getEmployeeHours(employeeId: string) {
+  const supabase = createClient();
+  const now = new Date();
+  const day = (now.getDay() + 6) % 7; // 0 = maandag
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - day);
+  const mondayStr = monday.toISOString().slice(0, 10);
+  const todayStr = now.toISOString().slice(0, 10);
+
+  const { data } = await supabase
+    .from("work_logs")
+    .select("hours, log_date")
+    .eq("employee_id", employeeId)
+    .gte("log_date", mondayStr);
+
+  const rows = data ?? [];
+  const today = rows
+    .filter((r: any) => r.log_date === todayStr)
+    .reduce((s: number, r: any) => s + Number(r.hours || 0), 0);
+  const week = rows.reduce((s: number, r: any) => s + Number(r.hours || 0), 0);
+  return { today, week };
+}
+
 export type SignedPhoto = {
   id: string;
   url: string | null;
