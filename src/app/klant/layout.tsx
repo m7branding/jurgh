@@ -6,7 +6,7 @@ const nav: NavItem[] = [{ href: "/klant", label: "Mijn dashboard" }];
 export default async function KlantLayout({ children }: { children: React.ReactNode }) {
   const profile = await requireRole(["klant"]);
   return (
-    <PortalShell role="klant" name={profile.full_name} nav={nav}>
+    <PortalShell role="klant" name={profile.full_name} nav={nav} theme="light">
       {children}
     </PortalShell>
   );

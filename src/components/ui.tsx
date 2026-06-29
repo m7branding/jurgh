@@ -7,16 +7,27 @@ import {
   type ProjectStatus,
 } from "@/lib/constants";
 
-// ---------- Logo ----------
-export function Logo({ className = "" }: { className?: string }) {
+// ---------- Logo + "Detailing Portal" lockup ----------
+export function Logo({
+  className = "",
+  tagline = true,
+  height = 28,
+}: {
+  className?: string;
+  tagline?: boolean;
+  height?: number;
+}) {
   return (
-    <span className={`inline-flex items-center gap-2 font-bold tracking-tight ${className}`}>
-      <span className="flex h-7 w-7 items-center justify-center rounded-md bg-jurgh-red text-white shadow-glow">
-        <span className="text-sm font-black">J</span>
-      </span>
-      <span className="text-white">
-        JURGH<span className="text-jurgh-red">.</span>
-      </span>
+    <span className={`inline-flex items-center ${className}`}>
+      {/* echte asset: /public/logo.svg */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/logo.svg" alt="JURGH" style={{ height }} className="w-auto" />
+      {tagline && (
+        <>
+          <span className="brand-sep" />
+          <span className="brand-tag">Detailing Portal</span>
+        </>
+      )}
     </span>
   );
 }
@@ -74,7 +85,7 @@ export function StatusProgress({ status }: { status: ProjectStatus }) {
     <div>
       <div className="mb-1.5 flex items-center justify-between text-xs text-jurgh-muted">
         <span>Voortgang</span>
-        <span className="text-white">{pct}%</span>
+        <span className="text-jurgh-text">{pct}%</span>
       </div>
       <ProgressBar value={pct} />
     </div>
@@ -108,7 +119,7 @@ export function EmptyState({
 }) {
   return (
     <div className="card flex flex-col items-center justify-center gap-2 px-6 py-14 text-center">
-      <p className="text-base font-semibold text-white">{title}</p>
+      <p className="text-base font-semibold text-jurgh-text">{title}</p>
       {description && <p className="max-w-md text-sm text-jurgh-muted">{description}</p>}
       {action && <div className="mt-3">{action}</div>}
     </div>
@@ -128,7 +139,7 @@ export function StatCard({
   return (
     <div className="card p-5">
       <p className="text-xs uppercase tracking-wide text-jurgh-muted">{label}</p>
-      <p className={`mt-1 text-2xl font-bold ${accent ? "text-jurgh-red" : "text-white"}`}>
+      <p className={`mt-1 text-2xl font-bold ${accent ? "text-jurgh-red" : "text-jurgh-text"}`}>
         {value}
       </p>
     </div>
@@ -145,7 +156,7 @@ export function SectionTitle({
 }) {
   return (
     <div className="mb-4 flex items-center justify-between">
-      <h2 className="text-lg font-bold text-white">{children}</h2>
+      <h2 className="text-lg font-bold text-jurgh-text">{children}</h2>
       {action}
     </div>
   );
@@ -184,7 +195,7 @@ export function CarThumb({
 
 export function BackLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Link href={href} className="inline-flex items-center gap-1 text-sm text-jurgh-muted hover:text-white">
+    <Link href={href} className="inline-flex items-center gap-1 text-sm text-jurgh-muted hover:text-jurgh-text">
       <span aria-hidden>←</span> {children}
     </Link>
   );

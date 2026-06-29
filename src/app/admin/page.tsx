@@ -16,7 +16,7 @@ export default async function AdminDashboard() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Admin dashboard</h1>
+          <h1 className="text-2xl font-bold text-jurgh-text">Admin dashboard</h1>
           <p className="text-jurgh-muted">Overzicht van alle projecten en activiteit.</p>
         </div>
         <Link href="/admin/projecten/nieuw" className="btn-primary">

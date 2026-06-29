@@ -33,7 +33,7 @@ export function NewProjectForm({ customers }: { customers: CustomerOption[] }) {
     <form action={action} className="space-y-6">
       {/* ---------- Klant ---------- */}
       <section className="card p-6">
-        <h2 className="mb-4 text-lg font-bold text-white">Klant</h2>
+        <h2 className="mb-4 text-lg font-bold text-jurgh-text">Klant</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className="label">Bestaande klant</label>
@@ -72,7 +72,7 @@ export function NewProjectForm({ customers }: { customers: CustomerOption[] }) {
 
       {/* ---------- Auto ---------- */}
       <section className="card p-6">
-        <h2 className="mb-4 text-lg font-bold text-white">Auto</h2>
+        <h2 className="mb-4 text-lg font-bold text-jurgh-text">Auto</h2>
         {selectedCustomer && selectedCustomer.vehicles.length > 0 && (
           <div className="mb-4">
             <label className="label">Bestaande auto van deze klant</label>
@@ -124,7 +124,7 @@ export function NewProjectForm({ customers }: { customers: CustomerOption[] }) {
 
       {/* ---------- Project ---------- */}
       <section className="card p-6">
-        <h2 className="mb-4 text-lg font-bold text-white">Projectgegevens</h2>
+        <h2 className="mb-4 text-lg font-bold text-jurgh-text">Projectgegevens</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className="label">Projecttitel</label>

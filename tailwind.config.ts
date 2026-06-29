@@ -5,13 +5,15 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // JURGH premium automotive palette
+        // Themeable surfaces/tekst via CSS-variabelen (RGB-kanalen).
         jurgh: {
-          black: "#0a0a0b",
-          panel: "#121214",
-          card: "#17171a",
-          border: "#26262b",
-          muted: "#8a8a93",
+          black: "rgb(var(--bg) / <alpha-value>)",
+          panel: "rgb(var(--panel) / <alpha-value>)",
+          card: "rgb(var(--surface) / <alpha-value>)",
+          border: "rgb(var(--border) / <alpha-value>)",
+          muted: "rgb(var(--muted) / <alpha-value>)",
+          text: "rgb(var(--text) / <alpha-value>)",
+          // Vaste accentkleuren in beide thema's
           red: "#e11d2a",
           redDark: "#b3121d",
           green: "#22c55e",
@@ -22,7 +24,6 @@ const config: Config = {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
       },
       boxShadow: {
-        card: "0 10px 30px -12px rgba(0,0,0,0.7)",
         glow: "0 0 0 1px rgba(225,29,42,0.4), 0 8px 30px -10px rgba(225,29,42,0.4)",
       },
     },

@@ -97,10 +97,10 @@ export async function ProjectDetail({
                 </Badge>
               )}
             </div>
-            <h1 className="mt-3 text-2xl font-bold text-white">{project.title}</h1>
+            <h1 className="mt-3 text-2xl font-bold text-jurgh-text">{project.title}</h1>
             <p className="mt-1 text-jurgh-muted">
               {vehicleTitle(v)} ·{" "}
-              <span className="font-mono uppercase tracking-wide text-white">
+              <span className="font-mono uppercase tracking-wide text-jurgh-text">
                 {v?.license_plate}
               </span>
             </p>
@@ -124,7 +124,7 @@ export async function ProjectDetail({
 
       {project.customer_notes && (
         <div className="panel p-4 text-sm text-jurgh-muted">
-          <span className="font-semibold text-white">Bericht voor de klant: </span>
+          <span className="font-semibold text-jurgh-text">Bericht voor de klant: </span>
           {project.customer_notes}
         </div>
       )}
@@ -154,7 +154,7 @@ export async function ProjectDetail({
                           <Badge tone="neutral">Intern</Badge>
                         )}
                       </div>
-                      <p className="mt-1 text-sm text-white">{r.body}</p>
+                      <p className="mt-1 text-sm text-jurgh-text">{r.body}</p>
                     </li>
                   ))}
               </ul>
@@ -172,7 +172,7 @@ export async function ProjectDetail({
               <SectionTitle
                 action={
                   <span className="text-sm text-jurgh-muted">
-                    Totaal: <span className="font-semibold text-white">{totalHours.toFixed(2)} u</span>
+                    Totaal: <span className="font-semibold text-jurgh-text">{totalHours.toFixed(2)} u</span>
                   </span>
                 }
               >
@@ -195,7 +195,7 @@ export async function ProjectDetail({
                         <tr key={w.id} className="border-t border-jurgh-border">
                           <td className="py-2 pr-3 text-jurgh-muted">{formatDate(w.log_date)}</td>
                           <td className="py-2 pr-3">{WORK_TYPE_LABEL[w.work_type as WorkType]}</td>
-                          <td className="py-2 pr-3 font-semibold text-white">{Number(w.hours).toFixed(2)}</td>
+                          <td className="py-2 pr-3 font-semibold text-jurgh-text">{Number(w.hours).toFixed(2)}</td>
                           <td className="py-2 pr-3 text-jurgh-muted">{w.profiles?.full_name ?? "—"}</td>
                           <td className="py-2 text-jurgh-muted">{w.description ?? "—"}</td>
                         </tr>
@@ -288,7 +288,7 @@ export async function ProjectDetail({
                     className="flex items-center justify-between gap-3 rounded-xl border border-jurgh-border bg-jurgh-black/40 px-3 py-2.5"
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-white">{d.name}</p>
+                      <p className="truncate text-sm font-medium text-jurgh-text">{d.name}</p>
                       <span className="text-xs text-jurgh-muted">
                         {DOCUMENT_TYPE_LABEL[d.type as DocumentType]} · {formatDate(d.created_at)}
                       </span>
@@ -318,7 +318,7 @@ function Field({ label, value }: { label: string; value?: string | null }) {
   return (
     <div>
       <dt className="text-xs uppercase tracking-wide text-jurgh-muted">{label}</dt>
-      <dd className="font-medium text-white">{value || "—"}</dd>
+      <dd className="font-medium text-jurgh-text">{value || "—"}</dd>
     </div>
   );
 }
@@ -364,7 +364,7 @@ function Timeline({
             }`}
           />
           <p className="text-xs text-jurgh-muted">{formatDateTime(it.at)}</p>
-          <p className="text-sm text-white">{it.text}</p>
+          <p className="text-sm text-jurgh-text">{it.text}</p>
         </li>
       ))}
     </ol>

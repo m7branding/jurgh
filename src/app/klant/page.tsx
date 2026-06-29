@@ -33,7 +33,7 @@ export default async function KlantDashboard() {
       <div className="card relative overflow-hidden p-8">
         <div className="relative z-10">
           <p className="text-sm uppercase tracking-wide text-jurgh-red">JURGH Car Dossier</p>
-          <h1 className="mt-1 text-3xl font-black text-white">Welkom terug, {firstName}</h1>
+          <h1 className="mt-1 text-3xl font-black text-jurgh-text">Welkom terug, {firstName}</h1>
           <p className="mt-2 max-w-lg text-jurgh-muted">
             Hier volg je live de voortgang van je auto: behandelingen, foto's vanuit de
             werkplaats en al je documenten op één plek.
@@ -52,7 +52,7 @@ export default async function KlantDashboard() {
       <section className="card p-6">
         <SectionTitle>Jouw rewards</SectionTitle>
         <p className="mb-3 text-sm text-jurgh-muted">
-          Je bent <span className="font-semibold text-white">{rewardPct}%</span> onderweg naar een{" "}
+          Je bent <span className="font-semibold text-jurgh-text">{rewardPct}%</span> onderweg naar een{" "}
           {REWARD_NAME}
         </p>
         <ProgressBar value={rewardPct} />

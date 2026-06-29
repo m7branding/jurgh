@@ -10,7 +10,7 @@ export default async function NewProjectPage() {
     <div className="mx-auto max-w-3xl space-y-5">
       <BackLink href="/admin/projecten">Terug naar projecten</BackLink>
       <div>
-        <h1 className="text-2xl font-bold text-white">Nieuw project aanmaken</h1>
+        <h1 className="text-2xl font-bold text-jurgh-text">Nieuw project aanmaken</h1>
         <p className="text-jurgh-muted">
           Koppel een klant en auto, kies het type en zet het project klaar.
         </p>

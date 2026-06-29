@@ -1,7 +1,6 @@
 "use client";
 
 import { useFormState, useFormStatus } from "react-dom";
-import Link from "next/link";
 import { signIn } from "./actions";
 import { Logo } from "@/components/ui";
 
@@ -18,19 +17,19 @@ export default function LoginPage() {
   const [state, formAction] = useFormState(signIn, { error: "" } as { error: string });
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-6">
-      <div className="w-full max-w-md">
+    <main data-theme="light" className="relative flex min-h-screen items-center justify-center px-6 py-12">
+      {/* Geblurde showroom-achtergrond (asset: /public/login-bg.avif) */}
+      <div className="login-bg" aria-hidden />
+      <div className="login-bg-overlay" aria-hidden />
+
+      <div className="relative z-10 w-full max-w-md">
         <div className="mb-8 flex justify-center">
-          <Link href="/">
-            <Logo className="text-xl" />
-          </Link>
+          <Logo height={34} />
         </div>
 
         <div className="card p-8">
-          <h1 className="text-xl font-bold text-white">Welkom terug</h1>
-          <p className="mt-1 text-sm text-jurgh-muted">
-            Log in op het JURGH klantenportaal.
-          </p>
+          <h1 className="text-xl font-bold text-jurgh-text">Welkom terug</h1>
+          <p className="mt-1 text-sm text-jurgh-muted">Log in op het JURGH Detailing Portal.</p>
 
           <form action={formAction} className="mt-6 space-y-4">
             <div>
@@ -72,7 +71,7 @@ export default function LoginPage() {
           </form>
         </div>
 
-        <p className="mt-6 text-center text-xs text-jurgh-muted">
+        <p className="mt-6 text-center text-xs font-medium text-jurgh-muted">
           Nog geen toegang? Neem contact op met JURGH Car Detailing.
         </p>
       </div>

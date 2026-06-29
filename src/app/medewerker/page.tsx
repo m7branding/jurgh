@@ -13,7 +13,7 @@ export default async function MedewerkerHome() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Mijn projecten</h1>
+        <h1 className="text-2xl font-bold text-jurgh-text">Mijn projecten</h1>
         <p className="text-jurgh-muted">Werkomgeving — log uren, foto's en bijzonderheden.</p>
       </div>
 

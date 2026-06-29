@@ -2,48 +2,100 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+/* ============================================================
+   Theming via CSS-variabelen (RGB-kanalen → werkt met /opacity).
+   Dark = JURGH admin/medewerker omgeving.
+   Light = clean klant + login omgeving.
+   ============================================================ */
+:root,
+[data-theme="dark"] {
+  --bg: 10 10 11;
+  --panel: 18 18 20;
+  --surface: 23 23 26;
+  --border: 38 38 43;
+  --muted: 138 138 147;
+  --text: 245 245 247;
+  --shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.7);
+}
+
+[data-theme="light"] {
+  --bg: 244 245 247;
+  --panel: 249 250 251;
+  --surface: 255 255 255;
+  --border: 230 232 236;
+  --muted: 107 114 128;
+  --text: 17 19 23;
+  --shadow: 0 10px 30px -16px rgba(17, 24, 39, 0.18);
 }
 
 html,
 body {
-  background: #0a0a0b;
-  color: #f5f5f7;
+  background: rgb(var(--bg));
+  color: rgb(var(--text));
   -webkit-font-smoothing: antialiased;
 }
 
-/* Subtiele automotive achtergrond-glow */
-body {
+/* Subtiele rode glow alleen in dark (automotive). */
+[data-theme="dark"] {
   background-image:
-    radial-gradient(900px 500px at 80% -10%, rgba(225, 29, 42, 0.10), transparent 60%),
+    radial-gradient(900px 500px at 80% -10%, rgba(225, 29, 42, 0.1), transparent 60%),
     radial-gradient(700px 400px at -10% 10%, rgba(225, 29, 42, 0.06), transparent 55%);
-  background-attachment: fixed;
 }
 
 @layer components {
   .card {
-    @apply rounded-2xl border border-jurgh-border bg-jurgh-card shadow-card;
+    @apply rounded-2xl border border-jurgh-border bg-jurgh-card;
+    box-shadow: var(--shadow);
   }
   .panel {
     @apply rounded-2xl border border-jurgh-border bg-jurgh-panel;
   }
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-jurgh-red/50 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-jurgh-red/50 disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-primary {
     @apply btn bg-jurgh-red text-white hover:bg-jurgh-redDark;
   }
   .btn-ghost {
-    @apply btn border border-jurgh-border bg-transparent text-jurgh-muted hover:text-white hover:border-jurgh-muted;
+    @apply btn border border-jurgh-border bg-transparent text-jurgh-muted hover:border-jurgh-muted hover:text-jurgh-text;
   }
   .btn-green {
-    @apply btn bg-jurgh-green text-black hover:brightness-110;
+    @apply btn bg-jurgh-green text-white hover:brightness-110;
   }
   .input {
-    @apply w-full rounded-xl border border-jurgh-border bg-jurgh-black/60 px-3.5 py-2.5 text-sm text-white placeholder:text-jurgh-muted/60 focus:border-jurgh-red/60 focus:outline-none focus:ring-1 focus:ring-jurgh-red/40;
+    @apply w-full rounded-xl border border-jurgh-border bg-jurgh-black/40 px-3.5 py-2.5 text-sm text-jurgh-text placeholder:text-jurgh-muted/60 focus:border-jurgh-red/60 focus:outline-none focus:ring-1 focus:ring-jurgh-red/40;
+  }
+  [data-theme="light"] .input {
+    @apply bg-white;
   }
   .label {
     @apply mb-1.5 block text-xs font-medium uppercase tracking-wide text-jurgh-muted;
   }
+  /* Clean separator + "Detailing Portal" lockup naast het logo */
+  .brand-sep {
+    @apply mx-3 h-6 w-px bg-jurgh-border;
+  }
+  .brand-tag {
+    @apply text-sm font-medium tracking-tight text-jurgh-muted;
+  }
+}
+
+/* ---------- Login achtergrond (geblurde showroomfoto) ---------- */
+.login-bg {
+  position: absolute;
+  inset: 0;
+  /* lichte fallback-kleur als /login-bg.avif (nog) ontbreekt */
+  background-color: #e9edf2;
+  background-image: url("/login-bg.avif");
+  background-size: cover;
+  background-position: center;
+  filter: blur(7px);
+  transform: scale(1.08);
+}
+.login-bg-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.55) 100%),
+    radial-gradient(60% 50% at 50% 45%, rgba(255, 255, 255, 0.25), transparent 70%);
 }

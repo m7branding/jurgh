@@ -31,7 +31,7 @@ export function ProjectCard({
           <Badge tone="neutral">{PROJECT_TYPE_LABEL[project.type as ProjectType]}</Badge>
         </div>
         <div>
-          <h3 className="font-semibold text-white">{vehicleTitle(v)}</h3>
+          <h3 className="font-semibold text-jurgh-text">{vehicleTitle(v)}</h3>
           <p className="text-sm text-jurgh-muted">
             <span className="font-mono uppercase">{v?.license_plate}</span>
             {project.customers ? ` · ${project.customers.name}` : ""}

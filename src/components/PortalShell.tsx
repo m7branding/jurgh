@@ -14,15 +14,17 @@ export function PortalShell({
   role,
   name,
   nav,
+  theme = "dark",
   children,
 }: {
   role: Role;
   name: string;
   nav: NavItem[];
+  theme?: "light" | "dark";
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen">
+    <div data-theme={theme} className="min-h-screen bg-jurgh-black text-jurgh-text">
       <header className="sticky top-0 z-30 border-b border-jurgh-border bg-jurgh-black/80 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-6">
@@ -34,7 +36,7 @@ export function PortalShell({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-jurgh-muted transition hover:bg-white/5 hover:text-white"
+                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-jurgh-muted transition hover:bg-jurgh-text/5 hover:text-jurgh-text"
                 >
                   {item.label}
                 </Link>
@@ -44,7 +46,7 @@ export function PortalShell({
 
           <div className="flex items-center gap-3">
             <div className="hidden text-right sm:block">
-              <p className="text-sm font-semibold leading-tight text-white">{name || "Gebruiker"}</p>
+              <p className="text-sm font-semibold leading-tight text-jurgh-text">{name || "Gebruiker"}</p>
               <Badge tone={role === "klant" ? "neutral" : "red"}>{roleLabel[role]}</Badge>
             </div>
             <form action="/auth/signout" method="post">
@@ -61,7 +63,7 @@ export function PortalShell({
             <Link
               key={item.href}
               href={item.href}
-              className="whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium text-jurgh-muted hover:text-white"
+              className="whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium text-jurgh-muted hover:text-jurgh-text"
             >
               {item.label}
             </Link>
