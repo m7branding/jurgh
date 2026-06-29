@@ -1,0 +1,571 @@
+-- ============================================================
+-- JURGH portaal — VOLLEDIGE SETUP IN ÉÉN BESTAND
+-- Plak dit complete bestand in Supabase → SQL Editor → Run.
+-- Bevat: schema (0001) + RLS (0002) + storage (0003) + seed.
+-- Veilig opnieuw te draaien (idempotent).
+-- ============================================================
+
+-- ============================================================
+-- JURGH Car Detailing — Klantenportaal
+-- Migration 0001: schema (MVP test-slice)
+-- ============================================================
+
+-- Extensions
+create extension if not exists "pgcrypto";
+
+-- ---------- Enums ----------
+do $$ begin
+  create type user_role as enum ('admin', 'medewerker', 'klant');
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create type project_type as enum ('glascoating', 'ppf', 'detailing', 'upgrade');
+exception when duplicate_object then null; end $$;
+
+-- Volgorde van statussen zoals in de projectflow (sectie 9)
+do $$ begin
+  create type project_status as enum (
+    'concept',
+    'offerte_aangevraagd',
+    'offerte_verstuurd',
+    'goedgekeurd',
+    'afspraak_ingepland',
+    'auto_ontvangen',
+    'in_behandeling',
+    'wacht_op_klant',
+    'kwaliteitscontrole',
+    'klaar_voor_oplevering',
+    'afgerond',
+    'gefactureerd',
+    'gearchiveerd'
+  );
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create type document_type as enum ('offerte', 'factuur', 'certificaat', 'overig');
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create type photo_label as enum (
+    'voor_behandeling',
+    'tijdens_behandeling',
+    'na_behandeling',
+    'schade_bijzonderheid',
+    'detailfoto',
+    'oplevering'
+  );
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create type work_type as enum (
+    'wassen', 'polijsten', 'glascoating', 'ppf_montage', 'interieur',
+    'inspectie', 'correctie', 'schadeherstel', 'oplevering', 'overig'
+  );
+exception when duplicate_object then null; end $$;
+
+-- ---------- profiles (1-op-1 met auth.users) ----------
+create table if not exists public.profiles (
+  id          uuid primary key references auth.users (id) on delete cascade,
+  role        user_role   not null default 'klant',
+  full_name   text        not null default '',
+  phone       text,
+  created_at  timestamptz not null default now()
+);
+
+-- ---------- customers ----------
+create table if not exists public.customers (
+  id          uuid primary key default gen_random_uuid(),
+  -- koppeling naar het klant-login account (optioneel: een klant kan ook zonder login bestaan)
+  profile_id  uuid references public.profiles (id) on delete set null,
+  name        text not null,
+  email       text,
+  phone       text,
+  notes       text,
+  created_at  timestamptz not null default now()
+);
+
+-- ---------- vehicles ----------
+create table if not exists public.vehicles (
+  id            uuid primary key default gen_random_uuid(),
+  customer_id   uuid not null references public.customers (id) on delete cascade,
+  license_plate text not null,
+  make          text,
+  model         text,
+  year          int,
+  color         text,
+  mileage       int,
+  photo_url     text,
+  created_at    timestamptz not null default now()
+);
+
+-- ---------- projects ----------
+create table if not exists public.projects (
+  id                     uuid primary key default gen_random_uuid(),
+  customer_id            uuid not null references public.customers (id) on delete restrict,
+  vehicle_id             uuid not null references public.vehicles (id) on delete restrict,
+  title                  text not null,
+  type                   project_type not null default 'detailing',
+  status                 project_status not null default 'concept',
+  price                  numeric(10,2),
+  discount               numeric(10,2) default 0,
+  price_note             text,
+  start_date             date,
+  appointment_date       date,
+  expected_delivery_date date,
+  internal_notes         text,
+  customer_notes         text,
+  completed_at           timestamptz,
+  created_by             uuid references public.profiles (id) on delete set null,
+  created_at             timestamptz not null default now(),
+  updated_at             timestamptz not null default now()
+);
+
+-- ---------- project_status_history ----------
+create table if not exists public.project_status_history (
+  id          uuid primary key default gen_random_uuid(),
+  project_id  uuid not null references public.projects (id) on delete cascade,
+  status      project_status not null,
+  note        text,
+  created_by  uuid references public.profiles (id) on delete set null,
+  created_at  timestamptz not null default now()
+);
+
+-- ---------- project_photos ----------
+create table if not exists public.project_photos (
+  id                  uuid primary key default gen_random_uuid(),
+  project_id          uuid not null references public.projects (id) on delete cascade,
+  storage_path        text not null,
+  label               photo_label not null default 'tijdens_behandeling',
+  caption             text,
+  visible_to_customer boolean not null default true,
+  uploaded_by         uuid references public.profiles (id) on delete set null,
+  created_at          timestamptz not null default now()
+);
+
+-- ---------- project_remarks (bijzonderheden) ----------
+create table if not exists public.project_remarks (
+  id                  uuid primary key default gen_random_uuid(),
+  project_id          uuid not null references public.projects (id) on delete cascade,
+  body                text not null,
+  visible_to_customer boolean not null default true,
+  created_by          uuid references public.profiles (id) on delete set null,
+  created_at          timestamptz not null default now()
+);
+
+-- ---------- project_documents ----------
+create table if not exists public.project_documents (
+  id            uuid primary key default gen_random_uuid(),
+  project_id    uuid not null references public.projects (id) on delete cascade,
+  type          document_type not null default 'overig',
+  name          text not null,
+  storage_path  text not null,
+  uploaded_by   uuid references public.profiles (id) on delete set null,
+  created_at    timestamptz not null default now()
+);
+
+-- ---------- work_logs (urenregistratie) ----------
+create table if not exists public.work_logs (
+  id            uuid primary key default gen_random_uuid(),
+  project_id    uuid not null references public.projects (id) on delete cascade,
+  employee_id   uuid references public.profiles (id) on delete set null,
+  log_date      date not null default current_date,
+  work_type     work_type not null default 'overig',
+  hours         numeric(5,2) not null default 0,
+  description   text,
+  internal_note text,
+  created_at    timestamptz not null default now()
+);
+
+-- ---------- indexes ----------
+create index if not exists idx_vehicles_customer    on public.vehicles (customer_id);
+create index if not exists idx_projects_customer    on public.projects (customer_id);
+create index if not exists idx_projects_vehicle     on public.projects (vehicle_id);
+create index if not exists idx_status_hist_project  on public.project_status_history (project_id);
+create index if not exists idx_photos_project       on public.project_photos (project_id);
+create index if not exists idx_remarks_project      on public.project_remarks (project_id);
+create index if not exists idx_documents_project    on public.project_documents (project_id);
+create index if not exists idx_worklogs_project     on public.work_logs (project_id);
+create index if not exists idx_worklogs_employee    on public.work_logs (employee_id);
+
+-- ---------- triggers ----------
+-- houd updated_at bij op projects
+create or replace function public.touch_updated_at()
+returns trigger language plpgsql as $$
+begin
+  new.updated_at = now();
+  return new;
+end $$;
+
+drop trigger if exists trg_projects_touch on public.projects;
+create trigger trg_projects_touch
+  before update on public.projects
+  for each row execute function public.touch_updated_at();
+
+-- Log statuswijziging automatisch in de historie
+create or replace function public.log_status_change()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if tg_op = 'INSERT' or new.status is distinct from old.status then
+    insert into public.project_status_history (project_id, status, created_by)
+    values (new.id, new.status, new.created_by);
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists trg_projects_status on public.projects;
+create trigger trg_projects_status
+  after insert or update of status on public.projects
+  for each row execute function public.log_status_change();
+
+-- Maak automatisch een profiel aan wanneer een auth user wordt aangemaakt.
+create or replace function public.handle_new_user()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.profiles (id, role, full_name)
+  values (
+    new.id,
+    coalesce((new.raw_user_meta_data ->> 'role')::user_role, 'klant'),
+    coalesce(new.raw_user_meta_data ->> 'full_name', '')
+  )
+  on conflict (id) do nothing;
+  return new;
+end $$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+-- ============================================================
+-- Migration 0002: Row Level Security
+-- Rollen: admin, medewerker (staff) zien alles; klant ziet alleen eigen data.
+-- ============================================================
+
+-- Helper: huidige rol ophalen
+create or replace function public.current_role()
+returns user_role language sql stable security definer set search_path = public as $$
+  select role from public.profiles where id = auth.uid();
+$$;
+
+create or replace function public.is_staff()
+returns boolean language sql stable security definer set search_path = public as $$
+  select coalesce(public.current_role() in ('admin','medewerker'), false);
+$$;
+
+create or replace function public.is_admin()
+returns boolean language sql stable security definer set search_path = public as $$
+  select coalesce(public.current_role() = 'admin', false);
+$$;
+
+-- Customer-ids die bij de ingelogde klant horen
+create or replace function public.owns_customer(cid uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.customers c
+    where c.id = cid and c.profile_id = auth.uid()
+  );
+$$;
+
+create or replace function public.owns_project(pid uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1
+    from public.projects p
+    join public.customers c on c.id = p.customer_id
+    where p.id = pid and c.profile_id = auth.uid()
+  );
+$$;
+
+-- ---------- enable RLS ----------
+alter table public.profiles               enable row level security;
+alter table public.customers              enable row level security;
+alter table public.vehicles               enable row level security;
+alter table public.projects               enable row level security;
+alter table public.project_status_history enable row level security;
+alter table public.project_photos         enable row level security;
+alter table public.project_remarks        enable row level security;
+alter table public.project_documents      enable row level security;
+alter table public.work_logs              enable row level security;
+
+-- ---------- profiles ----------
+drop policy if exists profiles_self_read on public.profiles;
+create policy profiles_self_read on public.profiles
+  for select using (id = auth.uid() or public.is_staff());
+
+drop policy if exists profiles_self_update on public.profiles;
+create policy profiles_self_update on public.profiles
+  for update using (id = auth.uid() or public.is_admin());
+
+drop policy if exists profiles_admin_all on public.profiles;
+create policy profiles_admin_all on public.profiles
+  for all using (public.is_admin()) with check (public.is_admin());
+
+-- ---------- customers ----------
+drop policy if exists customers_read on public.customers;
+create policy customers_read on public.customers
+  for select using (public.is_staff() or profile_id = auth.uid());
+
+drop policy if exists customers_staff_write on public.customers;
+create policy customers_staff_write on public.customers
+  for all using (public.is_staff()) with check (public.is_staff());
+
+-- ---------- vehicles ----------
+drop policy if exists vehicles_read on public.vehicles;
+create policy vehicles_read on public.vehicles
+  for select using (public.is_staff() or public.owns_customer(customer_id));
+
+drop policy if exists vehicles_staff_write on public.vehicles;
+create policy vehicles_staff_write on public.vehicles
+  for all using (public.is_staff()) with check (public.is_staff());
+
+-- ---------- projects ----------
+drop policy if exists projects_read on public.projects;
+create policy projects_read on public.projects
+  for select using (public.is_staff() or public.owns_customer(customer_id));
+
+-- medewerker mag bijwerken (status, notities) maar prijzen blijven via app-logica admin-only
+drop policy if exists projects_staff_write on public.projects;
+create policy projects_staff_write on public.projects
+  for all using (public.is_staff()) with check (public.is_staff());
+
+-- ---------- project_status_history ----------
+drop policy if exists status_read on public.project_status_history;
+create policy status_read on public.project_status_history
+  for select using (public.is_staff() or public.owns_project(project_id));
+
+drop policy if exists status_staff_write on public.project_status_history;
+create policy status_staff_write on public.project_status_history
+  for all using (public.is_staff()) with check (public.is_staff());
+
+-- ---------- project_photos ----------
+-- klant ziet alleen foto's die expliciet zichtbaar zijn gemaakt
+drop policy if exists photos_read on public.project_photos;
+create policy photos_read on public.project_photos
+  for select using (
+    public.is_staff()
+    or (visible_to_customer and public.owns_project(project_id))
+  );
+
+drop policy if exists photos_staff_write on public.project_photos;
+create policy photos_staff_write on public.project_photos
+  for all using (public.is_staff()) with check (public.is_staff());
+
+-- ---------- project_remarks ----------
+drop policy if exists remarks_read on public.project_remarks;
+create policy remarks_read on public.project_remarks
+  for select using (
+    public.is_staff()
+    or (visible_to_customer and public.owns_project(project_id))
+  );
+
+drop policy if exists remarks_staff_write on public.project_remarks;
+create policy remarks_staff_write on public.project_remarks
+  for all using (public.is_staff()) with check (public.is_staff());
+
+-- ---------- project_documents ----------
+drop policy if exists documents_read on public.project_documents;
+create policy documents_read on public.project_documents
+  for select using (public.is_staff() or public.owns_project(project_id));
+
+drop policy if exists documents_staff_write on public.project_documents;
+create policy documents_staff_write on public.project_documents
+  for all using (public.is_staff()) with check (public.is_staff());
+
+-- ---------- work_logs ----------
+-- staff ziet alle uren; klant ziet ze niet (intern)
+drop policy if exists worklogs_read on public.work_logs;
+create policy worklogs_read on public.work_logs
+  for select using (public.is_staff());
+
+drop policy if exists worklogs_staff_write on public.work_logs;
+create policy worklogs_staff_write on public.work_logs
+  for all using (public.is_staff()) with check (public.is_staff());
+
+-- ============================================================
+-- Migration 0003: Storage buckets + policies
+-- Twee private buckets: 'project-photos' en 'project-documents'.
+-- Bestandspad-conventie: <project_id>/<bestandsnaam>
+-- ============================================================
+
+insert into storage.buckets (id, name, public)
+values
+  ('project-photos', 'project-photos', false),
+  ('project-documents', 'project-documents', false)
+on conflict (id) do nothing;
+
+-- Helper: project_id uit het storage-pad (eerste map) halen
+create or replace function public.path_project_id(name text)
+returns uuid language sql immutable as $$
+  select nullif(split_part(name, '/', 1), '')::uuid;
+$$;
+
+-- ---------- project-photos ----------
+drop policy if exists "photos staff read" on storage.objects;
+create policy "photos staff read" on storage.objects
+  for select using (
+    bucket_id = 'project-photos' and public.is_staff()
+  );
+
+drop policy if exists "photos customer read" on storage.objects;
+create policy "photos customer read" on storage.objects
+  for select using (
+    bucket_id = 'project-photos'
+    and public.owns_project(public.path_project_id(name))
+    and exists (
+      select 1 from public.project_photos p
+      where p.storage_path = storage.objects.name
+        and p.visible_to_customer
+    )
+  );
+
+drop policy if exists "photos staff write" on storage.objects;
+create policy "photos staff write" on storage.objects
+  for insert with check (
+    bucket_id = 'project-photos' and public.is_staff()
+  );
+
+drop policy if exists "photos staff modify" on storage.objects;
+create policy "photos staff modify" on storage.objects
+  for update using (bucket_id = 'project-photos' and public.is_staff());
+
+drop policy if exists "photos staff delete" on storage.objects;
+create policy "photos staff delete" on storage.objects
+  for delete using (bucket_id = 'project-photos' and public.is_staff());
+
+-- ---------- project-documents ----------
+drop policy if exists "docs staff read" on storage.objects;
+create policy "docs staff read" on storage.objects
+  for select using (
+    bucket_id = 'project-documents' and public.is_staff()
+  );
+
+drop policy if exists "docs customer read" on storage.objects;
+create policy "docs customer read" on storage.objects
+  for select using (
+    bucket_id = 'project-documents'
+    and public.owns_project(public.path_project_id(name))
+  );
+
+drop policy if exists "docs staff write" on storage.objects;
+create policy "docs staff write" on storage.objects
+  for insert with check (
+    bucket_id = 'project-documents' and public.is_staff()
+  );
+
+drop policy if exists "docs staff modify" on storage.objects;
+create policy "docs staff modify" on storage.objects
+  for update using (bucket_id = 'project-documents' and public.is_staff());
+
+drop policy if exists "docs staff delete" on storage.objects;
+create policy "docs staff delete" on storage.objects
+  for delete using (bucket_id = 'project-documents' and public.is_staff());
+
+-- ============================================================
+-- JURGH portaal — SEED (browser-only, geen lokale tooling nodig)
+--
+-- Draai DIT pas NA de migraties 0001 → 0002 → 0003.
+-- Plak dit volledige bestand in: Supabase Dashboard → SQL Editor → Run.
+--
+-- Maakt 3 testaccounts aan + een demo-dossier. Volledig idempotent:
+-- je mag het meerdere keren draaien zonder dubbele data.
+--
+-- Wachtwoord voor ALLE testaccounts: JurghTest123!
+--   admin@jurgh.test       → admin
+--   medewerker@jurgh.test  → medewerker
+--   klant@jurgh.test       → klant (met demo-auto + project)
+-- ============================================================
+
+-- ---------- 1. Testgebruikers in auth schema ----------
+-- Helper die een auth user + e-mail identity aanmaakt als die nog niet bestaat,
+-- en de profielrol zet (de handle_new_user trigger maakt het profiel al aan).
+do $$
+declare
+  rec record;
+  uid uuid;
+begin
+  for rec in
+    select * from (values
+      ('admin@jurgh.test',      'admin',      'JURGH Admin'),
+      ('medewerker@jurgh.test', 'medewerker', 'JURGH Medewerker'),
+      ('klant@jurgh.test',      'klant',      'Jan de Vries')
+    ) as t(email, role, full_name)
+  loop
+    select id into uid from auth.users where email = rec.email;
+
+    if uid is null then
+      uid := gen_random_uuid();
+
+      insert into auth.users (
+        instance_id, id, aud, role, email, encrypted_password,
+        email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+        created_at, updated_at,
+        confirmation_token, email_change, email_change_token_new, recovery_token
+      ) values (
+        '00000000-0000-0000-0000-000000000000', uid, 'authenticated', 'authenticated',
+        rec.email, crypt('JurghTest123!', gen_salt('bf')),
+        now(),
+        '{"provider":"email","providers":["email"]}'::jsonb,
+        jsonb_build_object('role', rec.role, 'full_name', rec.full_name),
+        now(), now(), '', '', '', ''
+      );
+
+      insert into auth.identities (
+        provider_id, user_id, identity_data, provider,
+        last_sign_in_at, created_at, updated_at
+      ) values (
+        uid::text, uid,
+        jsonb_build_object('sub', uid::text, 'email', rec.email),
+        'email', now(), now(), now()
+      );
+    end if;
+
+    -- zorg dat het profiel de juiste rol heeft (idempotent)
+    insert into public.profiles (id, role, full_name)
+    values (uid, rec.role::user_role, rec.full_name)
+    on conflict (id) do update set role = excluded.role, full_name = excluded.full_name;
+  end loop;
+end $$;
+
+-- ---------- 2. Demo-dossier voor de klant ----------
+do $$
+declare
+  klant_uid   uuid;
+  admin_uid   uuid;
+  cust_id     uuid;
+  veh_id      uuid;
+  proj_exists boolean;
+begin
+  select id into klant_uid from auth.users where email = 'klant@jurgh.test';
+  select id into admin_uid from auth.users where email = 'admin@jurgh.test';
+
+  -- klant-record gekoppeld aan het login-account
+  select id into cust_id from public.customers where profile_id = klant_uid;
+  if cust_id is null then
+    insert into public.customers (profile_id, name, email, phone)
+    values (klant_uid, 'Jan de Vries', 'klant@jurgh.test', '+31 6 12345678')
+    returning id into cust_id;
+  end if;
+
+  -- demo-auto
+  select id into veh_id from public.vehicles where customer_id = cust_id limit 1;
+  if veh_id is null then
+    insert into public.vehicles (customer_id, license_plate, make, model, year, color, mileage)
+    values (cust_id, 'X-001-JG', 'Porsche', '911 Carrera', 2023, 'GT Silver', 8400)
+    returning id into veh_id;
+  end if;
+
+  -- demo-project
+  select exists(select 1 from public.projects where vehicle_id = veh_id) into proj_exists;
+  if not proj_exists then
+    insert into public.projects (
+      customer_id, vehicle_id, title, type, status, price,
+      start_date, appointment_date, customer_notes, created_by
+    ) values (
+      cust_id, veh_id, 'Glascoating First Class — Porsche 911', 'glascoating',
+      'in_behandeling', 1895.00, current_date, current_date,
+      'Welkom in je JURGH dossier. Hier volg je live de voortgang.', admin_uid
+    );
+  end if;
+end $$;
+
+-- Klaar. Log in op het portaal met een van de accounts hierboven.

@@ -1,0 +1,109 @@
+-- ============================================================
+-- JURGH portaal — SEED (browser-only, geen lokale tooling nodig)
+--
+-- Draai DIT pas NA de migraties 0001 → 0002 → 0003.
+-- Plak dit volledige bestand in: Supabase Dashboard → SQL Editor → Run.
+--
+-- Maakt 3 testaccounts aan + een demo-dossier. Volledig idempotent:
+-- je mag het meerdere keren draaien zonder dubbele data.
+--
+-- Wachtwoord voor ALLE testaccounts: JurghTest123!
+--   admin@jurgh.test       → admin
+--   medewerker@jurgh.test  → medewerker
+--   klant@jurgh.test       → klant (met demo-auto + project)
+-- ============================================================
+
+-- ---------- 1. Testgebruikers in auth schema ----------
+-- Helper die een auth user + e-mail identity aanmaakt als die nog niet bestaat,
+-- en de profielrol zet (de handle_new_user trigger maakt het profiel al aan).
+do $$
+declare
+  rec record;
+  uid uuid;
+begin
+  for rec in
+    select * from (values
+      ('admin@jurgh.test',      'admin',      'JURGH Admin'),
+      ('medewerker@jurgh.test', 'medewerker', 'JURGH Medewerker'),
+      ('klant@jurgh.test',      'klant',      'Jan de Vries')
+    ) as t(email, role, full_name)
+  loop
+    select id into uid from auth.users where email = rec.email;
+
+    if uid is null then
+      uid := gen_random_uuid();
+
+      insert into auth.users (
+        instance_id, id, aud, role, email, encrypted_password,
+        email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+        created_at, updated_at,
+        confirmation_token, email_change, email_change_token_new, recovery_token
+      ) values (
+        '00000000-0000-0000-0000-000000000000', uid, 'authenticated', 'authenticated',
+        rec.email, crypt('JurghTest123!', gen_salt('bf')),
+        now(),
+        '{"provider":"email","providers":["email"]}'::jsonb,
+        jsonb_build_object('role', rec.role, 'full_name', rec.full_name),
+        now(), now(), '', '', '', ''
+      );
+
+      insert into auth.identities (
+        provider_id, user_id, identity_data, provider,
+        last_sign_in_at, created_at, updated_at
+      ) values (
+        uid::text, uid,
+        jsonb_build_object('sub', uid::text, 'email', rec.email),
+        'email', now(), now(), now()
+      );
+    end if;
+
+    -- zorg dat het profiel de juiste rol heeft (idempotent)
+    insert into public.profiles (id, role, full_name)
+    values (uid, rec.role::user_role, rec.full_name)
+    on conflict (id) do update set role = excluded.role, full_name = excluded.full_name;
+  end loop;
+end $$;
+
+-- ---------- 2. Demo-dossier voor de klant ----------
+do $$
+declare
+  klant_uid   uuid;
+  admin_uid   uuid;
+  cust_id     uuid;
+  veh_id      uuid;
+  proj_exists boolean;
+begin
+  select id into klant_uid from auth.users where email = 'klant@jurgh.test';
+  select id into admin_uid from auth.users where email = 'admin@jurgh.test';
+
+  -- klant-record gekoppeld aan het login-account
+  select id into cust_id from public.customers where profile_id = klant_uid;
+  if cust_id is null then
+    insert into public.customers (profile_id, name, email, phone)
+    values (klant_uid, 'Jan de Vries', 'klant@jurgh.test', '+31 6 12345678')
+    returning id into cust_id;
+  end if;
+
+  -- demo-auto
+  select id into veh_id from public.vehicles where customer_id = cust_id limit 1;
+  if veh_id is null then
+    insert into public.vehicles (customer_id, license_plate, make, model, year, color, mileage)
+    values (cust_id, 'X-001-JG', 'Porsche', '911 Carrera', 2023, 'GT Silver', 8400)
+    returning id into veh_id;
+  end if;
+
+  -- demo-project
+  select exists(select 1 from public.projects where vehicle_id = veh_id) into proj_exists;
+  if not proj_exists then
+    insert into public.projects (
+      customer_id, vehicle_id, title, type, status, price,
+      start_date, appointment_date, customer_notes, created_by
+    ) values (
+      cust_id, veh_id, 'Glascoating First Class — Porsche 911', 'glascoating',
+      'in_behandeling', 1895.00, current_date, current_date,
+      'Welkom in je JURGH dossier. Hier volg je live de voortgang.', admin_uid
+    );
+  end if;
+end $$;
+
+-- Klaar. Log in op het portaal met een van de accounts hierboven.

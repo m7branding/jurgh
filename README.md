@@ -28,36 +28,23 @@ tijdlijn, uploadzones en fallback auto-thumbnail zijn aanwezig.
 
 ---
 
-## Lokaal draaien
+## Setup A — Browser-only (aanbevolen, geen lokale tooling)
 
-### 1. Dependencies installeren
-```bash
-npm install
-```
+Je hoeft niets te installeren. Alles gebeurt in de browser via Supabase + Netlify.
 
-### 2. Supabase project klaarzetten
-1. Maak (of gebruik) een project op [supabase.com](https://supabase.com).
-2. Open de **SQL Editor** en draai de migraties uit `supabase/migrations/` in volgorde:
-   - `0001_init.sql` (schema + triggers)
-   - `0002_rls.sql` (row level security)
-   - `0003_storage.sql` (storage buckets + policies)
+### 1. Database + testaccounts klaarzetten (één paste)
+1. Ga naar je Supabase project → **SQL Editor** → **New query**.
+2. Open `supabase/full_setup.sql` uit deze repo, kopieer de **volledige inhoud**,
+   plak in de editor en klik **Run**.
 
-### 3. Environment variabelen
-Kopieer `.env.example` naar `.env` en vul in (Supabase → Settings → API):
-```bash
-cp .env.example .env
-```
-```
-NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-SUPABASE_SERVICE_ROLE_KEY=eyJ...   # alleen voor het seed-script
-```
+Dat ene bestand zet alles klaar: schema, Row Level Security, storage-buckets én
+drie testaccounts mét demo-dossier. Je mag het veilig opnieuw draaien.
 
-### 4. Testaccounts + demo-dossier aanmaken
-```bash
-node supabase/seed.mjs
-```
-Dit maakt drie accounts (wachtwoord voor alle: `JurghTest123!`):
+> Wil je het stap voor stap? Draai dan in plaats daarvan de losse bestanden in
+> volgorde: `migrations/0001_init.sql` → `0002_rls.sql` → `0003_storage.sql` →
+> `seed.sql`.
+
+Testaccounts (wachtwoord voor alle: `JurghTest123!`):
 
 | E-mail | Rol |
 | --- | --- |
@@ -65,12 +52,45 @@ Dit maakt drie accounts (wachtwoord voor alle: `JurghTest123!`):
 | `medewerker@jurgh.test` | Medewerker |
 | `klant@jurgh.test` | Klant (met demo-auto + project) |
 
-### 5. Starten
+### 2. App online zetten via Netlify
+1. Koppel deze GitHub-repo in Netlify ("Import from Git"). Netlify draait zelf
+   `npm install` + `npm run build` (de `@netlify/plugin-nextjs` staat al klaar).
+2. Zet onder **Site settings → Environment variables**:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=https://<jouw-project>.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=<jouw publishable / anon key>
+   ```
+   (Te vinden in Supabase → Settings → API. De service-role key is **niet** nodig.)
+3. Voeg in Supabase → Authentication → URL Configuration je Netlify-URL toe als
+   Site URL / Redirect URL.
+4. Open je Netlify-URL en log in — je wordt op basis van je rol automatisch naar
+   de juiste omgeving gestuurd.
+
+---
+
+## Setup B — Lokaal draaien (alleen voor ontwikkelen)
+
+### 1. Dependencies installeren
+```bash
+npm install
+```
+
+### 2. Database klaarzetten
+Run `supabase/full_setup.sql` in de Supabase SQL Editor (zie Setup A, stap 1).
+
+### 3. Environment variabelen
+```bash
+cp .env.example .env
+```
+Vul `NEXT_PUBLIC_SUPABASE_URL` en `NEXT_PUBLIC_SUPABASE_ANON_KEY` in.
+(`SUPABASE_SERVICE_ROLE_KEY` is alleen nodig als je het Node-seedscript
+`supabase/seed.mjs` gebruikt in plaats van de SQL-seed.)
+
+### 4. Starten
 ```bash
 npm run dev
 ```
-Open <http://localhost:3000> en log in. Je wordt automatisch naar de juiste
-omgeving gestuurd op basis van je rol.
+Open <http://localhost:3000> en log in.
 
 ---
 
