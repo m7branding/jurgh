@@ -79,6 +79,50 @@ export async function ProjectDetail({
   const v = project.vehicles;
   const c = project.customers;
   const totalHours = workLogs.reduce((s: number, w: any) => s + Number(w.hours || 0), 0);
+  const isMedewerker = mode === "medewerker";
+
+  // Urenregistratie-kaart: voor medewerkers bovenaan en uitgelicht, met het
+  // logformulier direct bovenaan voor snel loggen.
+  const workLogSection = isStaff ? (
+    <section className={`card p-6 ${isMedewerker ? "ring-2 ring-jurgh-red/30" : ""}`}>
+      <SectionTitle
+        action={
+          <span className="text-sm text-jurgh-muted">
+            Totaal: <span className="font-semibold text-jurgh-text">{totalHours.toFixed(2)} u</span>
+          </span>
+        }
+      >
+        {isMedewerker ? "⏱ Snel uren loggen" : "Urenregistratie"}
+      </SectionTitle>
+      <WorkLogForm projectId={projectId} />
+      {workLogs.length > 0 && (
+        <div className="mt-4 overflow-x-auto border-t border-jurgh-border pt-4">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs uppercase text-jurgh-muted">
+                <th className="py-2 pr-3">Datum</th>
+                <th className="py-2 pr-3">Type</th>
+                <th className="py-2 pr-3">Uren</th>
+                <th className="py-2 pr-3">Medewerker</th>
+                <th className="py-2">Omschrijving</th>
+              </tr>
+            </thead>
+            <tbody>
+              {workLogs.map((w: any) => (
+                <tr key={w.id} className="border-t border-jurgh-border">
+                  <td className="py-2 pr-3 text-jurgh-muted">{formatDate(w.log_date)}</td>
+                  <td className="py-2 pr-3">{WORK_TYPE_LABEL[w.work_type as WorkType]}</td>
+                  <td className="py-2 pr-3 font-semibold text-jurgh-text">{Number(w.hours).toFixed(2)}</td>
+                  <td className="py-2 pr-3 text-jurgh-muted">{w.profiles?.full_name ?? "—"}</td>
+                  <td className="py-2 text-jurgh-muted">{w.description ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  ) : null;
 
   return (
     <div className="space-y-6">
@@ -146,6 +190,9 @@ export async function ProjectDetail({
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         {/* ---------- Linkerkolom: tijdlijn & historie ---------- */}
         <div className="space-y-6">
+          {/* Medewerker: loggen bovenaan en uitgelicht */}
+          {isMedewerker && workLogSection}
+
           <section className="card p-6">
             <SectionTitle>Tijdlijn</SectionTitle>
             <Timeline history={history} remarks={remarks} showHidden={isStaff} />
@@ -180,49 +227,8 @@ export async function ProjectDetail({
             )}
           </section>
 
-          {/* Urenregistratie (alleen staff) */}
-          {isStaff && (
-            <section className="card p-6">
-              <SectionTitle
-                action={
-                  <span className="text-sm text-jurgh-muted">
-                    Totaal: <span className="font-semibold text-jurgh-text">{totalHours.toFixed(2)} u</span>
-                  </span>
-                }
-              >
-                Urenregistratie
-              </SectionTitle>
-              {workLogs.length > 0 && (
-                <div className="mb-4 overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-left text-xs uppercase text-jurgh-muted">
-                        <th className="py-2 pr-3">Datum</th>
-                        <th className="py-2 pr-3">Type</th>
-                        <th className="py-2 pr-3">Uren</th>
-                        <th className="py-2 pr-3">Medewerker</th>
-                        <th className="py-2">Omschrijving</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {workLogs.map((w: any) => (
-                        <tr key={w.id} className="border-t border-jurgh-border">
-                          <td className="py-2 pr-3 text-jurgh-muted">{formatDate(w.log_date)}</td>
-                          <td className="py-2 pr-3">{WORK_TYPE_LABEL[w.work_type as WorkType]}</td>
-                          <td className="py-2 pr-3 font-semibold text-jurgh-text">{Number(w.hours).toFixed(2)}</td>
-                          <td className="py-2 pr-3 text-jurgh-muted">{w.profiles?.full_name ?? "—"}</td>
-                          <td className="py-2 text-jurgh-muted">{w.description ?? "—"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-              <div className="border-t border-jurgh-border pt-4">
-                <WorkLogForm projectId={projectId} />
-              </div>
-            </section>
-          )}
+          {/* Admin: urenregistratie in normale positie */}
+          {isAdmin && workLogSection}
 
           {/* Interne notities (alleen admin) */}
           {isAdmin && project.internal_notes && (

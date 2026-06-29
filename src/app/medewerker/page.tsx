@@ -1,6 +1,7 @@
-import { listProjects } from "@/lib/data";
+import { listProjects, vehicleTitle } from "@/lib/data";
 import { ProjectCard } from "@/components/ProjectCard";
 import { SectionTitle, EmptyState } from "@/components/ui";
+import { QuickLogFab } from "@/components/forms/QuickLogFab";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,13 @@ export default async function MedewerkerHome() {
   const active = projects.filter(
     (p) => !["afgerond", "gefactureerd", "gearchiveerd"].includes(p.status)
   );
+
+  const logOptions = active.map((p) => ({
+    id: p.id,
+    label: `${vehicleTitle(p.vehicles)} — ${p.vehicles?.license_plate ?? ""}${
+      p.customers ? ` (${p.customers.name})` : ""
+    }`,
+  }));
 
   return (
     <div className="space-y-6">
@@ -27,6 +35,9 @@ export default async function MedewerkerHome() {
           ))}
         </div>
       )}
+
+      {/* Zwevende snelknop om direct uren te loggen */}
+      {logOptions.length > 0 && <QuickLogFab projects={logOptions} />}
     </div>
   );
 }
