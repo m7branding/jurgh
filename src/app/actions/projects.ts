@@ -81,6 +81,22 @@ export async function createProject(_prev: unknown, formData: FormData) {
       .single();
     if (error) return { error: "Kon auto niet aanmaken: " + error.message };
     vehicleId = data.id;
+
+    // optionele auto-foto die bij het aanmaken is meegegeven
+    const photo = formData.get("vehicle_photo") as File | null;
+    if (photo && photo.size > 0) {
+      const ext = photo.name.split(".").pop() || "jpg";
+      const path = `${vehicleId}/${crypto.randomUUID()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("vehicle-photos")
+        .upload(path, photo, { contentType: photo.type });
+      if (!upErr) {
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("vehicle-photos").getPublicUrl(path);
+        await supabase.from("vehicles").update({ photo_url: publicUrl }).eq("id", vehicleId);
+      }
+    }
   }
 
   const title = String(formData.get("title") || "").trim();

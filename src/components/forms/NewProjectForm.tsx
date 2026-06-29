@@ -118,6 +118,18 @@ export function NewProjectForm({ customers }: { customers: CustomerOption[] }) {
               <label className="label">Km-stand</label>
               <input name="mileage" type="number" className="input" placeholder="8400" />
             </div>
+            <div className="sm:col-span-3">
+              <label className="label">Auto-foto (optioneel)</label>
+              <input
+                name="vehicle_photo"
+                type="file"
+                accept="image/*"
+                className="block w-full text-sm text-jurgh-muted file:mr-3 file:rounded-lg file:border-0 file:bg-jurgh-red file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-jurgh-redDark"
+              />
+              <p className="mt-1 text-xs text-jurgh-muted">
+                Geen foto? Dan tonen we automatisch een nette fallback-thumbnail.
+              </p>
+            </div>
           </div>
         )}
       </section>

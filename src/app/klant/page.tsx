@@ -1,15 +1,10 @@
-import Link from "next/link";
 import { requireProfile } from "@/lib/auth";
 import { listProjects } from "@/lib/data";
 import { ProjectCard } from "@/components/ProjectCard";
-import { StatCard, SectionTitle, EmptyState, ProgressBar } from "@/components/ui";
-import { formatPrice } from "@/lib/constants";
+import { StatCard, SectionTitle, EmptyState } from "@/components/ui";
+import { RewardsPanel } from "@/components/RewardsPanel";
 
 export const dynamic = "force-dynamic";
-
-// Basis spaarsysteem: 1 punt per bestede euro op afgeronde projecten.
-const REWARD_TARGET = 2000; // punten voor de volgende reward
-const REWARD_NAME = "gratis DIY pakket 🎁";
 
 export default async function KlantDashboard() {
   const profile = await requireProfile();
@@ -20,10 +15,10 @@ export default async function KlantDashboard() {
   );
   const done = projects.filter((p) => ["afgerond", "gefactureerd"].includes(p.status));
 
+  // Basis spaarsysteem: 1 punt per bestede euro op afgeronde projecten.
   const points = Math.round(
     done.reduce((s, p) => s + Number(p.price ?? 0) - Number(p.discount ?? 0), 0)
   );
-  const rewardPct = Math.min(100, Math.round((points / REWARD_TARGET) * 100));
 
   const firstName = profile.full_name?.split(" ")[0] || "daar";
 
@@ -48,18 +43,8 @@ export default async function KlantDashboard() {
         <StatCard label="JURGH punten" value={points.toLocaleString("nl-NL")} />
       </div>
 
-      {/* Rewards */}
-      <section className="card p-6">
-        <SectionTitle>Jouw rewards</SectionTitle>
-        <p className="mb-3 text-sm text-jurgh-muted">
-          Je bent <span className="font-semibold text-jurgh-text">{rewardPct}%</span> onderweg naar een{" "}
-          {REWARD_NAME}
-        </p>
-        <ProgressBar value={rewardPct} />
-        <p className="mt-2 text-xs text-jurgh-muted">
-          {points.toLocaleString("nl-NL")} / {REWARD_TARGET.toLocaleString("nl-NL")} punten
-        </p>
-      </section>
+      {/* Rewards / spaarsysteem */}
+      <RewardsPanel points={points} />
 
       {/* Lopende projecten */}
       <section>
