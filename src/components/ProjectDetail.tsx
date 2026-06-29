@@ -38,6 +38,7 @@ import {
   WorkLogForm,
   PhotoUploadForm,
   DocumentUploadForm,
+  VehiclePhotoForm,
   PhotoVisibilityToggle,
 } from "@/components/forms/StaffForms";
 
@@ -121,6 +122,19 @@ export async function ProjectDetail({
           </div>
         </div>
       </div>
+
+      {isStaff && (
+        <div className="panel flex flex-wrap items-center justify-between gap-3 p-4">
+          <span className="text-sm font-medium text-jurgh-text">
+            Auto-foto {v?.photo_url ? "" : "(nog geen foto)"}
+          </span>
+          <VehiclePhotoForm
+            vehicleId={project.vehicle_id}
+            projectId={projectId}
+            hasPhoto={!!v?.photo_url}
+          />
+        </div>
+      )}
 
       {project.customer_notes && (
         <div className="panel p-4 text-sm text-jurgh-muted">

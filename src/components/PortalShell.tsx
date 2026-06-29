@@ -14,7 +14,7 @@ export function PortalShell({
   role,
   name,
   nav,
-  theme = "dark",
+  theme = "light",
   children,
 }: {
   role: Role;

@@ -234,6 +234,38 @@ export async function togglePhotoVisibility(formData: FormData) {
   refresh(projectId);
 }
 
+// ---------- Auto-foto uploaden / vervangen ----------
+export async function uploadVehiclePhoto(_prev: unknown, formData: FormData) {
+  await staff();
+  const supabase = createClient();
+  const vehicleId = String(formData.get("vehicle_id"));
+  const projectId = String(formData.get("project_id") || "");
+  const file = formData.get("file") as File | null;
+  if (!vehicleId) return { error: "Geen auto gekoppeld." };
+  if (!file || file.size === 0) return { error: "Selecteer een foto." };
+
+  const ext = file.name.split(".").pop() || "jpg";
+  const path = `${vehicleId}/${crypto.randomUUID()}.${ext}`;
+
+  const { error: upErr } = await supabase.storage
+    .from("vehicle-photos")
+    .upload(path, file, { contentType: file.type, upsert: false });
+  if (upErr) return { error: "Upload mislukt: " + upErr.message };
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from("vehicle-photos").getPublicUrl(path);
+
+  const { error } = await supabase
+    .from("vehicles")
+    .update({ photo_url: publicUrl })
+    .eq("id", vehicleId);
+  if (error) return { error: error.message };
+
+  if (projectId) refresh(projectId);
+  return { ok: true };
+}
+
 // ---------- Document uploaden (offerte / factuur / certificaat) ----------
 export async function uploadDocument(_prev: unknown, formData: FormData) {
   const profile = await staff();

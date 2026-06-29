@@ -13,9 +13,9 @@ const config: Config = {
           border: "rgb(var(--border) / <alpha-value>)",
           muted: "rgb(var(--muted) / <alpha-value>)",
           text: "rgb(var(--text) / <alpha-value>)",
-          // Vaste accentkleuren in beide thema's
-          red: "#e11d2a",
-          redDark: "#b3121d",
+          // Vaste accentkleuren (rood = JURGH logo-rood)
+          red: "#e30512",
+          redDark: "#b30410",
           green: "#22c55e",
           gold: "#c9a14a",
         },

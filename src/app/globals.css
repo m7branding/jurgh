@@ -86,7 +86,7 @@ body {
   inset: 0;
   /* lichte fallback-kleur als /login-bg.avif (nog) ontbreekt */
   background-color: #e9edf2;
-  background-image: url("/login-bg.avif");
+  background-image: url("/JURGH-BG-Image.png");
   background-size: cover;
   background-position: center;
   filter: blur(7px);

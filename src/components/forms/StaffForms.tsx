@@ -9,6 +9,7 @@ import {
   addWorkLog,
   uploadPhoto,
   uploadDocument,
+  uploadVehiclePhoto,
   togglePhotoVisibility,
 } from "@/app/actions/projects";
 import {
@@ -231,6 +232,35 @@ export function DocumentUploadForm({ projectId }: { projectId: string }) {
         {state?.error && <span className="text-sm text-jurgh-red">{state.error}</span>}
         {state?.ok && <span className="text-sm text-jurgh-green">Document geüpload ✓</span>}
       </div>
+    </form>
+  );
+}
+
+// ---------- Auto-foto uploaden / vervangen ----------
+export function VehiclePhotoForm({
+  vehicleId,
+  projectId,
+  hasPhoto,
+}: {
+  vehicleId: string;
+  projectId: string;
+  hasPhoto: boolean;
+}) {
+  const [state, action] = useFormState(uploadVehiclePhoto, {} as { error?: string; ok?: boolean });
+  return (
+    <form action={action} className="flex flex-wrap items-center gap-2">
+      <input type="hidden" name="vehicle_id" value={vehicleId} />
+      <input type="hidden" name="project_id" value={projectId} />
+      <input
+        type="file"
+        name="file"
+        accept="image/*"
+        required
+        className="block max-w-[230px] text-xs text-jurgh-muted file:mr-2 file:rounded-lg file:border-0 file:bg-jurgh-red file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-jurgh-redDark"
+      />
+      <Pending label={hasPhoto ? "Foto vervangen" : "Auto-foto uploaden"} busy="Uploaden…" />
+      {state?.error && <span className="text-xs text-jurgh-red">{state.error}</span>}
+      {state?.ok && <span className="text-xs text-jurgh-green">Foto opgeslagen ✓</span>}
     </form>
   );
 }

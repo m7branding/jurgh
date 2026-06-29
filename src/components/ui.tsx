@@ -19,9 +19,9 @@ export function Logo({
 }) {
   return (
     <span className={`inline-flex items-center ${className}`}>
-      {/* echte asset: /public/logo.svg */}
+      {/* echte asset: /public/JURGH-Logo2.svg */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/logo.svg" alt="JURGH" style={{ height }} className="w-auto" />
+      <img src="/JURGH-Logo2.svg" alt="JURGH" style={{ height }} className="w-auto" />
       {tagline && (
         <>
           <span className="brand-sep" />
