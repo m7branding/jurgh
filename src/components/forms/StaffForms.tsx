@@ -1,12 +1,15 @@
 "use client";
 
 import { useFormState, useFormStatus } from "react-dom";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import {
   updateStatus,
   completeProject,
   addRemark,
   addWorkLog,
+  addExtraWork,
+  respondExtraWork,
+  setExtraWorkStatus,
   uploadPhoto,
   uploadDocument,
   uploadVehiclePhoto,
@@ -232,6 +235,101 @@ export function DocumentUploadForm({ projectId }: { projectId: string }) {
         {state?.error && <span className="text-sm text-jurgh-red">{state.error}</span>}
         {state?.ok && <span className="text-sm text-jurgh-green">Document geüpload ✓</span>}
       </div>
+    </form>
+  );
+}
+
+// ---------- Meerwerk toevoegen (staff) ----------
+export function ExtraWorkForm({ projectId }: { projectId: string }) {
+  const [state, action] = useFormState(addExtraWork, {} as { error?: string; ok?: boolean });
+  const ref = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    if (state?.ok) ref.current?.reset();
+  }, [state]);
+  return (
+    <form ref={ref} action={action} className="space-y-3">
+      <input type="hidden" name="project_id" value={projectId} />
+      <div>
+        <label className="label">Titel</label>
+        <input name="title" required className="input" placeholder="bijv. Extra polijststap motorkap" />
+      </div>
+      <div>
+        <label className="label">Omschrijving</label>
+        <textarea name="description" rows={2} className="input" />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="label">Prijs (€, − voor minderwerk)</label>
+          <input name="price" type="number" step="0.01" className="input" placeholder="125.00" />
+        </div>
+        <div>
+          <label className="label">Extra uren (schatting)</label>
+          <input name="estimated_hours" type="number" step="0.25" min="0" className="input" placeholder="1.5" />
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <Pending label="Meerwerk voorstellen" busy="Opslaan…" />
+        {state?.error && <span className="text-sm text-jurgh-red">{state.error}</span>}
+        {state?.ok && <span className="text-sm text-jurgh-green">Voorgesteld ✓ — klant kan dit nu accepteren.</span>}
+      </div>
+    </form>
+  );
+}
+
+// Klant: accepteren / afwijzen
+export function ExtraWorkRespond({
+  id,
+  projectId,
+}: {
+  id: string;
+  projectId: string;
+}) {
+  return (
+    <div className="flex gap-2">
+      <form action={respondExtraWork}>
+        <input type="hidden" name="extra_work_id" value={id} />
+        <input type="hidden" name="project_id" value={projectId} />
+        <input type="hidden" name="accept" value="true" />
+        <button type="submit" className="btn-green px-3 py-1.5 text-xs">
+          ✓ Accepteren
+        </button>
+      </form>
+      <form action={respondExtraWork}>
+        <input type="hidden" name="extra_work_id" value={id} />
+        <input type="hidden" name="project_id" value={projectId} />
+        <input type="hidden" name="accept" value="false" />
+        <button type="submit" className="btn-ghost px-3 py-1.5 text-xs">
+          Afwijzen
+        </button>
+      </form>
+    </div>
+  );
+}
+
+// Staff: status bijwerken (bv. uitgevoerd)
+export function ExtraWorkStatusControl({
+  id,
+  projectId,
+  current,
+}: {
+  id: string;
+  projectId: string;
+  current: string;
+}) {
+  return (
+    <form action={setExtraWorkStatus} className="flex items-center gap-2">
+      <input type="hidden" name="extra_work_id" value={id} />
+      <input type="hidden" name="project_id" value={projectId} />
+      <select name="status" defaultValue={current} className="input max-w-[170px] py-1.5 text-xs">
+        <option value="voorgesteld">Voorgesteld</option>
+        <option value="intern_akkoord">Intern akkoord</option>
+        <option value="klant_akkoord">Klant akkoord</option>
+        <option value="uitgevoerd">Uitgevoerd</option>
+        <option value="afgewezen">Afgewezen</option>
+      </select>
+      <button type="submit" className="btn-ghost px-3 py-1.5 text-xs">
+        Opslaan
+      </button>
     </form>
   );
 }
