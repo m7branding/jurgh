@@ -4,6 +4,51 @@ import type { IconKey } from "@/lib/catalog";
 // Bewust minimalistisch/abstract i.p.v. letterlijke pictogrammen.
 
 const paths: Record<IconKey, React.ReactNode> = {
+  branding: (
+    <>
+      <path d="M16 3l4 6-4 6-4-6 4-6z" />
+      <path d="M16 15l4 6-4 8-4-8 4-6z" opacity="0.55" />
+      <circle cx="16" cy="9" r="1.3" fill="currentColor" stroke="none" />
+    </>
+  ),
+  print: (
+    <>
+      <rect x="6" y="9" width="20" height="14" rx="2" />
+      <path d="M9 9V5h10l4 4" opacity="0.6" />
+      <path d="M10 15h12M10 19h8" />
+    </>
+  ),
+  websites: (
+    <>
+      <rect x="4" y="6" width="24" height="20" rx="2.5" />
+      <path d="M4 12h24" />
+      <circle cx="8" cy="9" r="0.9" fill="currentColor" stroke="none" />
+      <circle cx="11" cy="9" r="0.9" fill="currentColor" stroke="none" />
+      <path d="M9 18h9M9 22h6" opacity="0.6" />
+    </>
+  ),
+  webshop: (
+    <>
+      <path d="M7 10h18l-2 12H9L7 10z" />
+      <path d="M11 10a5 5 0 0 1 10 0" />
+      <circle cx="13" cy="26" r="1.4" fill="currentColor" stroke="none" />
+      <circle cx="21" cy="26" r="1.4" fill="currentColor" stroke="none" />
+    </>
+  ),
+  webapps: (
+    <>
+      <rect x="4" y="5" width="24" height="22" rx="2.5" />
+      <path d="M4 11h24M12 11v16" />
+      <path d="M16 15h8M16 19h8M16 23h5" opacity="0.6" />
+    </>
+  ),
+  apps: (
+    <>
+      <rect x="9" y="3" width="14" height="26" rx="3.5" />
+      <path d="M13 6h6" opacity="0.6" />
+      <circle cx="16" cy="25" r="1.4" fill="currentColor" stroke="none" />
+    </>
+  ),
   hosting: (
     <>
       <circle cx="16" cy="16" r="4.5" />

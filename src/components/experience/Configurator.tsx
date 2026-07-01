@@ -4,8 +4,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CATALOG,
   CATEGORY_BY_ID,
+  CATEGORY_ORDER,
+  GOALS,
   PKG_BY_ID,
+  STAGES,
   formatEuro,
+  journeyFor,
   recommendationsFor,
   type Category,
   type IconKey,
@@ -13,6 +17,14 @@ import {
 } from "@/lib/catalog";
 import { CategoryIcon } from "./CategoryIcon";
 import { Starfield } from "./Starfield";
+
+const INTRO_MAILTO =
+  "mailto:hello@m7branding.com?subject=" +
+  encodeURIComponent("Kennismakingsgesprek aanvragen") +
+  "&body=" +
+  encodeURIComponent(
+    "Hoi M7,\n\nIk kom graag vrijblijvend kennismaken en sparren over de mogelijkheden.\n\nNaam:\nBedrijf:\nTelefoon:\nWaar ik mee wil starten:\n"
+  );
 
 // ------------------------------------------------------------ kleine icons
 function Check() {
@@ -337,6 +349,16 @@ export function Configurator() {
   const [activeCat, setActiveCat] = useState<IconKey>(CATALOG[0].id);
   const [modalOpen, setModalOpen] = useState(false);
 
+  // ---- intake (waar sta je / wat wil je bereiken)
+  const [stage, setStage] = useState<string | null>(null);
+  const [goals, setGoals] = useState<string[]>([]);
+  const journey = useMemo(() => journeyFor(stage, goals), [stage, goals]);
+  const journeyIndex = useMemo(() => {
+    const m = new Map<IconKey, number>();
+    journey.forEach((c, i) => m.set(c, i + 1));
+    return m;
+  }, [journey]);
+
   const sectionRefs = useRef<Partial<Record<IconKey, HTMLElement>>>({});
   const io = useRef<IntersectionObserver | null>(null);
 
@@ -466,21 +488,95 @@ export function Configurator() {
             <Sparkle /> M7 — online experience
           </span>
           <h1>
-            Klik je eigen <span className="exp-grad-text">digitale slagkracht</span> bij elkaar
+            Bouw je eigen <span className="exp-grad-text">digitale slagkracht</span>
           </h1>
           <p>
-            Vergeet tig losse offertes. Blader door onze catalogus — Hosting, Support, Marketing,
-            Tracking, SEO/AEO, Funnels en CRM — en stel real-time je dienstverlening samen. Met een
-            heldere eenmalige én doorlopende prijs.
+            Vergeet tig losse offertes. Vertel ons waar je staat en wat je wilt bereiken — wij
+            zetten een logisch pad uit door de hele catalogus: van branding, websites, webshops en
+            apps tot marketing, SEO/AEO, funnels, tracking, hosting en support.
           </p>
+
+          {/* -------- INTAKE -------- */}
+          <div className="exp-intake exp-reveal" ref={(el) => reveal(el)}>
+            <div className="exp-intake-step">
+              <div className="exp-intake-q">
+                <span className="exp-intake-num">1</span> Waar sta je nu?
+              </div>
+              <div className="exp-opt-chips" style={{ justifyContent: "center" }}>
+                {STAGES.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    className={`exp-opt-chip ${stage === s.id ? "is-on" : ""}`}
+                    title={s.desc}
+                    onClick={() => setStage((cur) => (cur === s.id ? null : s.id))}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="exp-intake-step">
+              <div className="exp-intake-q">
+                <span className="exp-intake-num">2</span> Wat wil je bereiken?{" "}
+                <span className="exp-intake-hint">meerdere mogelijk</span>
+              </div>
+              <div className="exp-opt-chips" style={{ justifyContent: "center" }}>
+                {GOALS.map((g) => (
+                  <button
+                    key={g.id}
+                    type="button"
+                    className={`exp-opt-chip ${goals.includes(g.id) ? "is-on" : ""}`}
+                    onClick={() =>
+                      setGoals((cur) =>
+                        cur.includes(g.id) ? cur.filter((x) => x !== g.id) : [...cur, g.id]
+                      )
+                    }
+                  >
+                    <span aria-hidden style={{ opacity: 0.85 }}>{g.emoji}</span> {g.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* -------- JOUW PAD -------- */}
+          {journey.length > 0 ? (
+            <div className="exp-path exp-reveal" ref={(el) => reveal(el)}>
+              <div className="exp-path-label">
+                <Sparkle /> Jouw aanbevolen pad
+              </div>
+              <div className="exp-path-flow">
+                {journey.map((cid, i) => (
+                  <span key={cid} className="exp-path-node-wrap">
+                    <button className="exp-path-node" onClick={() => goTo(cid)}>
+                      <span className="exp-path-node-num">{i + 1}</span>
+                      <CategoryIcon name={cid} />
+                      {CATEGORY_BY_ID[cid].label}
+                    </button>
+                    {i < journey.length - 1 && <span className="exp-path-arrow"><Arrow /></span>}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           <div className="exp-hero-cta">
-            <button className="exp-btn exp-btn-primary" onClick={() => goTo(CATALOG[0].id)}>
-              Begin met samenstellen <Arrow />
+            <button
+              className="exp-btn exp-btn-primary"
+              onClick={() => goTo(journey[0] ?? CATALOG[0].id)}
+            >
+              {journey.length > 0 ? "Start bij stap 1" : "Begin met samenstellen"} <Arrow />
             </button>
-            <a className="exp-btn exp-btn-ghost" href="mailto:hello@m7branding.com">
-              Liever sparren? Mail ons
+            <a className="exp-btn exp-btn-ghost" href={INTRO_MAILTO}>
+              Plan een kennismaking
             </a>
           </div>
+          <p className="exp-note" style={{ textAlign: "center", marginTop: 18 }}>
+            Alle bedragen zijn indicatieve vanafprijzen. De uiteindelijke scope bepalen we samen —
+            geheel vrijblijvend.
+          </p>
         </header>
 
         {/* -------- RAIL -------- */}
@@ -488,12 +584,16 @@ export function Configurator() {
           {CATALOG.map((cat) => {
             const c = countFor(cat);
             const rec = recommendations.has(cat.id);
+            const jn = journeyIndex.get(cat.id);
             return (
               <button
                 key={cat.id}
-                className={`exp-tab ${activeCat === cat.id ? "is-active" : ""}`}
+                className={`exp-tab ${activeCat === cat.id ? "is-active" : ""} ${
+                  jn && c === 0 ? "is-journey" : ""
+                }`}
                 onClick={() => goTo(cat.id)}
               >
+                {jn && c === 0 && <span className="exp-tab-step">{jn}</span>}
                 <CategoryIcon name={cat.id} className="exp-tab-icon" />
                 {cat.label}
                 {c > 0 && <span className="exp-tab-count">{c}</span>}
@@ -526,7 +626,7 @@ export function Configurator() {
         <div className="exp-bar">
           <div className="exp-bar-totals">
             <div className="exp-bar-total">
-              <div className="k">Eenmalig</div>
+              <div className="k">Eenmalig vanaf</div>
               <div className="v">
                 {formatEuro(animSetup)}
                 {totals.custom && <small> + maatwerk</small>}
@@ -556,6 +656,8 @@ export function Configurator() {
           qty={qty}
           options={options}
           totals={totals}
+          stage={stage}
+          goals={goals}
           onClose={() => setModalOpen(false)}
         />
       )}
@@ -569,12 +671,16 @@ function QuoteModal({
   qty,
   options,
   totals,
+  stage,
+  goals,
   onClose,
 }: {
   selectedIds: Set<string>;
   qty: Record<string, number>;
   options: Record<string, string[]>;
   totals: { setup: number; monthly: number; custom: boolean };
+  stage: string | null;
+  goals: string[];
   onClose: () => void;
 }) {
   const [copied, setCopied] = useState(false);
@@ -583,17 +689,22 @@ function QuoteModal({
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
 
-  const rows = useMemo(
-    () =>
-      [...selectedIds]
-        .map((id) => PKG_BY_ID[id])
-        .filter(Boolean)
-        .map(({ pkg, cat }) => {
-          const n = pkg.kind === "item" ? qty[pkg.id] ?? 1 : 1;
-          return { id: pkg.id, name: pkg.name, cat: cat.label, n, price: pkg.price };
-        }),
-    [selectedIds, qty]
-  );
+  // Rijen gegroepeerd per categorie (in catalogus-volgorde).
+  const groups = useMemo(() => {
+    const byCat = new Map<IconKey, { label: string; rows: { id: string; name: string; n: number; price: Pkg["price"] }[] }>();
+    for (const id of selectedIds) {
+      const entry = PKG_BY_ID[id];
+      if (!entry) continue;
+      const { pkg, cat } = entry;
+      if (!byCat.has(cat.id)) byCat.set(cat.id, { label: cat.label, rows: [] });
+      const n = pkg.kind === "item" ? qty[pkg.id] ?? 1 : 1;
+      byCat.get(cat.id)!.rows.push({ id: pkg.id, name: pkg.name, n, price: pkg.price });
+    }
+    return CATEGORY_ORDER.filter((c) => byCat.has(c)).map((c) => ({ id: c, ...byCat.get(c)! }));
+  }, [selectedIds, qty]);
+
+  const stageLabel = STAGES.find((s) => s.id === stage)?.label;
+  const goalLabels = goals.map((g) => GOALS.find((x) => x.id === g)?.label).filter(Boolean) as string[];
 
   const chosenOptions = useMemo(
     () =>
@@ -607,9 +718,15 @@ function QuoteModal({
 
   const summaryText = useMemo(() => {
     const lines = ["M7 — Samengestelde dienstverlening", ""];
-    rows.forEach((r) => {
-      const p = priceLabel(r.price);
-      lines.push(`• ${r.cat} — ${r.name}${r.n > 1 ? ` (${r.n}×)` : ""} — ${p.main} ${p.unit}`.trim());
+    if (stageLabel) lines.push(`Startpunt: ${stageLabel}`);
+    if (goalLabels.length) lines.push(`Doelen: ${goalLabels.join(", ")}`);
+    if (stageLabel || goalLabels.length) lines.push("");
+    groups.forEach((g) => {
+      lines.push(`[${g.label}]`);
+      g.rows.forEach((r) => {
+        const p = priceLabel(r.price);
+        lines.push(`  • ${r.name}${r.n > 1 ? ` (${r.n}×)` : ""} — ${p.main} ${p.unit}`.trim());
+      });
     });
     if (chosenOptions.length) {
       lines.push("", "Voorkeuren:");
@@ -617,11 +734,13 @@ function QuoteModal({
     }
     lines.push(
       "",
-      `Totaal eenmalig: ${formatEuro(totals.setup)}${totals.custom ? " + maatwerk" : ""}`,
-      `Totaal doorlopend: ${formatEuro(totals.monthly)} /mnd`
+      `Totaal eenmalig (vanaf): ${formatEuro(totals.setup)}${totals.custom ? " + maatwerk" : ""}`,
+      `Totaal doorlopend: ${formatEuro(totals.monthly)} /mnd`,
+      "",
+      "(Indicatieve vanafprijzen — graag vrijblijvend afstemmen.)"
     );
     return lines.join("\n");
-  }, [rows, chosenOptions, totals]);
+  }, [groups, chosenOptions, totals, stageLabel, goalLabels]);
 
   const copy = async () => {
     try {
@@ -651,27 +770,44 @@ function QuoteModal({
         </button>
         <h3>Jouw dienstverlening</h3>
         <p style={{ color: "var(--exp-muted)", fontSize: 13.5, marginTop: 6 }}>
-          Controleer je samenstelling en stuur 'm door — we werken 'm uit tot een concrete offerte.
+          Controleer je samenstelling en stuur 'm door — we werken 'm vrijblijvend uit tot een
+          concrete offerte, of plannen eerst een kennismaking.
         </p>
 
+        {(stageLabel || goalLabels.length > 0) && (
+          <div className="exp-intake-summary">
+            {stageLabel && <span className="exp-chip">Start · {stageLabel}</span>}
+            {goalLabels.map((g) => (
+              <span className="exp-chip" key={g}>
+                Doel · {g}
+              </span>
+            ))}
+          </div>
+        )}
+
         <div className="exp-summary-list">
-          {rows.map((r) => {
-            const p = priceLabel(r.price);
-            return (
-              <div className="exp-summary-row" key={r.id}>
-                <div>
-                  <div className="n">
-                    {r.name}
-                    {r.n > 1 ? ` · ${r.n}×` : ""}
-                  </div>
-                  <div className="c">{r.cat}</div>
-                </div>
-                <div className="p">
-                  {p.main} <span style={{ color: "var(--exp-faint)" }}>{p.unit}</span>
-                </div>
+          {groups.map((g) => (
+            <div key={g.id}>
+              <div className="exp-summary-group">
+                <CategoryIcon name={g.id} />
+                {g.label}
               </div>
-            );
-          })}
+              {g.rows.map((r) => {
+                const p = priceLabel(r.price);
+                return (
+                  <div className="exp-summary-row" key={r.id}>
+                    <div className="n">
+                      {r.name}
+                      {r.n > 1 ? ` · ${r.n}×` : ""}
+                    </div>
+                    <div className="p">
+                      {p.main} <span style={{ color: "var(--exp-faint)" }}>{p.unit}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
           {chosenOptions.map((o) => (
             <div className="exp-summary-row" key={o.label}>
               <div className="n">{o.label}</div>
@@ -681,7 +817,7 @@ function QuoteModal({
         </div>
 
         <div className="exp-summary-tot">
-          <span>Totaal eenmalig</span>
+          <span>Totaal eenmalig (vanaf)</span>
           <span>
             {formatEuro(totals.setup)}
             {totals.custom && " + maatwerk"}
@@ -717,6 +853,13 @@ function QuoteModal({
             {copied ? "Gekopieerd ✓" : "Kopieer"}
           </button>
         </div>
+        <p className="exp-note" style={{ textAlign: "center", marginTop: 14 }}>
+          Liever eerst overleggen?{" "}
+          <a href={INTRO_MAILTO} style={{ color: "var(--exp-a2)" }}>
+            Plan een vrijblijvend kennismakingsgesprek
+          </a>
+          . Alle bedragen zijn indicatieve vanafprijzen.
+        </p>
       </div>
     </div>
   );
