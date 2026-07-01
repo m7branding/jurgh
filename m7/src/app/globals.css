@@ -1,0 +1,17 @@
+/* M7 — globale basis. De experience zelf styelt zich verder via
+   experience.css (scoped onder .exp-root). */
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #0a0a0b;
+  color: #f4f4f8;
+  -webkit-font-smoothing: antialiased;
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+}
+a {
+  color: inherit;
+}

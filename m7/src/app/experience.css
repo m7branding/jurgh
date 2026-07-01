@@ -1,10 +1,11 @@
 /* ============================================================
-   M7 — Service Experience. Zelfstandige, dark styling (los van
-   het JURGH-portalthema). Alles scoped onder .exp-root.
+   M7 — Service Experience. Zelfstandige dark styling in M7-huisstijl
+   (near-black, bright teal accent, groene checks, gouden highlight,
+   pill-CTA's met circulaire pijl). Alles scoped onder .exp-root.
    ============================================================ */
 
 .exp-root {
-  --exp-bg: #05060a;
+  --exp-bg: #0a0a0b; /* M7 near-black */
   --exp-panel: rgba(255, 255, 255, 0.035);
   --exp-panel-2: rgba(255, 255, 255, 0.055);
   --exp-border: rgba(255, 255, 255, 0.09);
@@ -12,9 +13,11 @@
   --exp-text: #f4f4f8;
   --exp-muted: #9a9ab0;
   --exp-faint: #6b6b82;
-  --exp-a1: #8b5cff; /* violet */
-  --exp-a2: #35d6ff; /* cyan */
-  --exp-a3: #ff5c9d; /* magenta accent */
+  --exp-a1: #2fe3cf; /* M7 bright teal */
+  --exp-a2: #22d3ee; /* cyan */
+  --exp-a3: #7c5cff; /* purple (AI/magic accent) */
+  --exp-gold: #f5c93b; /* highlight geel */
+  --exp-green: #22c55e; /* checks */
 
   position: relative;
   min-height: 100vh;
@@ -39,9 +42,9 @@
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(60% 45% at 80% -5%, rgba(139, 92, 255, 0.16), transparent 60%),
-    radial-gradient(55% 40% at 5% 8%, rgba(53, 214, 255, 0.1), transparent 55%),
-    radial-gradient(50% 40% at 50% 110%, rgba(255, 92, 157, 0.1), transparent 60%);
+    radial-gradient(60% 45% at 80% -5%, rgba(124, 92, 255, 0.16), transparent 60%),
+    radial-gradient(55% 40% at 5% 8%, rgba(47, 227, 207, 0.12), transparent 55%),
+    radial-gradient(50% 40% at 50% 110%, rgba(34, 211, 238, 0.1), transparent 60%);
 }
 .exp-grid-overlay {
   position: fixed;
@@ -65,10 +68,13 @@
 
 /* ---------- Typografie helpers ---------- */
 .exp-grad-text {
-  background: linear-gradient(100deg, var(--exp-a1), var(--exp-a2) 55%, var(--exp-a3));
+  background: linear-gradient(100deg, var(--exp-a1), var(--exp-a2) 80%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+.exp-gold-text {
+  color: var(--exp-gold);
 }
 .exp-eyebrow {
   display: inline-flex;
@@ -240,11 +246,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 13px 22px;
-  border-radius: 14px;
-  font-size: 14px;
-  font-weight: 600;
+  gap: 12px;
+  padding: 10px 12px 10px 24px;
+  border-radius: 999px; /* M7 pill */
+  font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
   border: 1px solid transparent;
   transition: transform 0.18s ease, box-shadow 0.25s ease, background 0.2s ease, border-color 0.2s ease;
@@ -253,27 +259,50 @@
 .exp-btn:active {
   transform: translateY(1px);
 }
+/* M7 primary CTA: donkere pill + circulaire teal pijl. */
 .exp-btn-primary {
-  color: #0a0a12;
-  background: linear-gradient(100deg, var(--exp-a1), var(--exp-a2));
-  box-shadow: 0 10px 34px -12px rgba(139, 92, 255, 0.8);
+  color: #fff;
+  background: #17171a;
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 12px 34px -16px rgba(0, 0, 0, 0.9);
 }
 .exp-btn-primary:hover {
-  box-shadow: 0 16px 46px -12px rgba(53, 214, 255, 0.7);
+  border-color: var(--exp-a1);
+  box-shadow: 0 16px 40px -16px rgba(47, 227, 207, 0.5);
   transform: translateY(-1px);
 }
 .exp-btn-ghost {
   color: var(--exp-text);
   border-color: var(--exp-border-strong);
   background: var(--exp-panel);
+  padding: 13px 24px;
 }
 .exp-btn-ghost:hover {
-  border-color: var(--exp-a2);
+  border-color: var(--exp-a1);
   color: #fff;
 }
 .exp-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+/* Circulaire teal pijl-badge in de primary CTA (M7-signatuur). */
+.exp-circle-arrow {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--exp-a1);
+  color: #062b26;
+  flex: none;
+  transition: transform 0.2s ease;
+}
+.exp-btn-primary:hover .exp-circle-arrow {
+  transform: translate(2px, -2px);
+}
+.exp-circle-arrow svg {
+  width: 16px;
+  height: 16px;
 }
 
 /* ---------- Categorie-rail (tabs) ---------- */
@@ -364,14 +393,14 @@
   width: 10px;
   height: 10px;
   border-radius: 999px;
-  background: var(--exp-a3);
-  box-shadow: 0 0 0 0 rgba(255, 92, 157, 0.6);
+  background: var(--exp-a1);
+  box-shadow: 0 0 0 0 rgba(47, 227, 207, 0.6);
   animation: exp-pulse 1.8s infinite;
 }
 @keyframes exp-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(255, 92, 157, 0.6); }
-  70% { box-shadow: 0 0 0 8px rgba(255, 92, 157, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(255, 92, 157, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(47, 227, 207, 0.6); }
+  70% { box-shadow: 0 0 0 8px rgba(47, 227, 207, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(47, 227, 207, 0); }
 }
 
 /* ---------- Categorie-koppen ---------- */
@@ -591,7 +620,7 @@
   width: 15px;
   height: 15px;
   margin-top: 2px;
-  color: var(--exp-a2);
+  color: var(--exp-green);
 }
 .exp-card-foot {
   margin-top: auto;
@@ -652,8 +681,8 @@
   margin-top: 22px;
   padding: 16px 18px;
   border-radius: 16px;
-  border: 1px dashed rgba(255, 92, 157, 0.4);
-  background: rgba(255, 92, 157, 0.05);
+  border: 1px dashed rgba(124, 92, 255, 0.45);
+  background: rgba(124, 92, 255, 0.06);
   display: flex;
   align-items: center;
   gap: 14px;

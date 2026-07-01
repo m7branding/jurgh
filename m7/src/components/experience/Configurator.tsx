@@ -41,6 +41,16 @@ function Arrow() {
     </svg>
   );
 }
+// M7-signatuur: diagonale pijl in een teal cirkel (voor primary CTA's).
+function CircleArrow() {
+  return (
+    <span className="exp-circle-arrow" aria-hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M7 17L17 7M8 7h9v9" />
+      </svg>
+    </span>
+  );
+}
 function Sparkle() {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -488,7 +498,8 @@ export function Configurator() {
             <Sparkle /> M7 — online experience
           </span>
           <h1>
-            Bouw je eigen <span className="exp-grad-text">digitale slagkracht</span>
+            Bouw je eigen <span className="exp-grad-text">digitale slagkracht</span>{" "}
+            <span className="exp-gold-text">— level up</span>
           </h1>
           <p>
             Vergeet tig losse offertes. Vertel ons waar je staat en wat je wilt bereiken — wij
@@ -567,7 +578,8 @@ export function Configurator() {
               className="exp-btn exp-btn-primary"
               onClick={() => goTo(journey[0] ?? CATALOG[0].id)}
             >
-              {journey.length > 0 ? "Start bij stap 1" : "Begin met samenstellen"} <Arrow />
+              {journey.length > 0 ? "Start bij stap 1" : "Lanceer vandaag jouw project"}
+              <CircleArrow />
             </button>
             <a className="exp-btn exp-btn-ghost" href={INTRO_MAILTO}>
               Plan een kennismaking
@@ -645,7 +657,7 @@ export function Configurator() {
             </div>
           </div>
           <button className="exp-btn exp-btn-primary" onClick={() => setModalOpen(true)}>
-            Bekijk &amp; vraag aan <Arrow />
+            Bekijk &amp; vraag aan <CircleArrow />
           </button>
         </div>
       )}
@@ -847,7 +859,7 @@ function QuoteModal({
 
         <div className="exp-modal-actions">
           <button className="exp-btn exp-btn-primary" style={{ flex: 1 }} onClick={submit}>
-            Verstuur aanvraag <Arrow />
+            Verstuur aanvraag <CircleArrow />
           </button>
           <button className="exp-btn exp-btn-ghost" onClick={copy}>
             {copied ? "Gekopieerd ✓" : "Kopieer"}
