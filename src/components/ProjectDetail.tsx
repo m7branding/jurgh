@@ -447,9 +447,9 @@ export async function ProjectDetail({
 
 function Field({ label, value }: { label: string; value?: string | null }) {
   return (
-    <div>
+    <div className="min-w-0">
       <dt className="text-xs uppercase tracking-wide text-jurgh-muted">{label}</dt>
-      <dd className="font-medium text-jurgh-text">{value || "—"}</dd>
+      <dd className="break-words font-medium text-jurgh-text">{value || "—"}</dd>
     </div>
   );
 }

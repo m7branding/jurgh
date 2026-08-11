@@ -43,7 +43,7 @@ export default async function AdminDashboard() {
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {active.map((p) => (
-              <ProjectCard key={p.id} project={p} href={`/admin/projecten/${p.id}`} cta="Open project" />
+              <ProjectCard key={p.id} project={p} href={`/admin/projecten/${p.id}`} cta="Open project" mode="admin" />
             ))}
           </div>
         )}

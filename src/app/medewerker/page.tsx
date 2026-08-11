@@ -61,7 +61,13 @@ export default async function MedewerkerHome() {
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {active.map((p) => (
-            <ProjectCard key={p.id} project={p} href={`/medewerker/projecten/${p.id}`} cta="Aan de slag" />
+            <ProjectCard
+              key={p.id}
+              project={p}
+              href={`/medewerker/projecten/${p.id}`}
+              cta="Aan de slag"
+              mode="medewerker"
+            />
           ))}
         </div>
       )}

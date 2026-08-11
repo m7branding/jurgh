@@ -20,7 +20,7 @@ export default async function AdminProjects() {
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {projects.map((p) => (
-            <ProjectCard key={p.id} project={p} href={`/admin/projecten/${p.id}`} cta="Open project" />
+            <ProjectCard key={p.id} project={p} href={`/admin/projecten/${p.id}`} cta="Open project" mode="admin" />
           ))}
         </div>
       )}

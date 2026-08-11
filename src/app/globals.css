@@ -33,6 +33,9 @@ body {
   background: rgb(var(--bg));
   color: rgb(var(--text));
   -webkit-font-smoothing: antialiased;
+  /* Voorkomt dat een los overflow-element (bv. een lange e-mail zonder
+     spaties in een grid) de hele pagina breder dan het scherm duwt. */
+  overflow-x: hidden;
 }
 
 /* Subtiele rode glow alleen in dark (automotive). */
