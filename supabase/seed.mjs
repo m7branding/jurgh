@@ -143,14 +143,16 @@ async function main() {
   // ---------- M7 Branding testaccounts: Alexander (admin) + Alexander Koselka (klant) ----------
   await ensureUser("alexander@m7branding.com", "admin", "Alexander", M7_PASSWORD);
   await ensureUser("alexander_koselka@hotmail.com", "klant", "Alexander Koselka", M7_PASSWORD);
+  await ensureUser("test@detailing.nl", "medewerker", "Medewerker", M7_PASSWORD);
 
   console.log("\nKlaar. Testaccounts (wachtwoord voor alle: " + PASSWORD + "):");
   console.log("  admin@jurgh.test       → admin");
   console.log("  medewerker@jurgh.test  → medewerker");
   console.log("  klant@jurgh.test       → klant");
-  console.log("\nM7 Branding testaccounts (wachtwoord voor beide: " + M7_PASSWORD + "):");
+  console.log("\nM7 Branding testaccounts (wachtwoord voor alle: " + M7_PASSWORD + "):");
   console.log("  alexander@m7branding.com       → admin");
   console.log("  alexander_koselka@hotmail.com  → klant");
+  console.log("  test@detailing.nl              → medewerker");
 }
 
 main().catch((e) => {

@@ -52,12 +52,13 @@ Testaccounts (wachtwoord voor alle: `JurghTest123!`):
 | `medewerker@jurgh.test` | Medewerker |
 | `klant@jurgh.test` | Klant (met demo-auto + project) |
 
-Daarnaast staan er twee M7 Branding-testaccounts klaar (wachtwoord voor beide: `123123123`):
+Daarnaast staan er drie M7 Branding-testaccounts klaar (wachtwoord voor alle: `123123123`):
 
 | E-mail | Rol |
 | --- | --- |
 | `alexander@m7branding.com` | Admin |
 | `alexander_koselka@hotmail.com` | Klant |
+| `test@detailing.nl` | Medewerker |
 
 ### 2. App online zetten via Netlify
 1. Koppel deze GitHub-repo in Netlify ("Import from Git"). Netlify draait zelf

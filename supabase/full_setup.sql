@@ -1,3 +1,10 @@
+-- ============================================================
+-- JURGH portaal — VOLLEDIGE SETUP IN ÉÉN BESTAND
+-- Plak dit complete bestand in Supabase → SQL Editor → Run.
+-- Bevat: schema (0001) + RLS (0002) + storage (0003) + auto-foto's (0004)
+--        + meerwerk (0005) + workflow-uitbreidingen (0006) + seed.
+--        Veilig opnieuw te draaien (idempotent).
+-- ============================================================
 
 -- ============================================================
 -- JURGH Car Detailing — Klantenportaal
@@ -680,6 +687,7 @@ create policy worklogs_delete on public.work_logs
 -- Wachtwoord voor de M7 Branding-testaccounts: 123123123
 --   alexander@m7branding.com       → admin
 --   alexander_koselka@hotmail.com  → klant
+--   test@detailing.nl              → medewerker
 -- ============================================================
 
 -- ---------- 1. Testgebruikers in auth schema ----------
@@ -696,7 +704,8 @@ begin
       ('medewerker@jurgh.test',         'medewerker', 'JURGH Medewerker',  'JurghTest123!'),
       ('klant@jurgh.test',              'klant',      'Jan de Vries',      'JurghTest123!'),
       ('alexander@m7branding.com',      'admin',      'Alexander',         '123123123'),
-      ('alexander_koselka@hotmail.com', 'klant',      'Alexander Koselka', '123123123')
+      ('alexander_koselka@hotmail.com', 'klant',      'Alexander Koselka', '123123123'),
+      ('test@detailing.nl',             'medewerker', 'Medewerker',        '123123123')
     ) as t(email, role, full_name, password)
   loop
     select id into uid from auth.users where email = rec.email;
