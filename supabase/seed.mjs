@@ -34,8 +34,9 @@ const admin = createClient(url, serviceKey, {
 });
 
 const PASSWORD = "JurghTest123!";
+const M7_PASSWORD = "123123123";
 
-async function ensureUser(email, role, fullName) {
+async function ensureUser(email, role, fullName, password = PASSWORD) {
   // bestaat de user al?
   const { data: list } = await admin.auth.admin.listUsers();
   let user = list?.users?.find((u) => u.email === email);
@@ -43,7 +44,7 @@ async function ensureUser(email, role, fullName) {
   if (!user) {
     const { data, error } = await admin.auth.admin.createUser({
       email,
-      password: PASSWORD,
+      password,
       email_confirm: true,
       user_metadata: { role, full_name: fullName },
     });
@@ -51,12 +52,91 @@ async function ensureUser(email, role, fullName) {
     user = data.user;
     console.log(`✓ user aangemaakt: ${email} (${role})`);
   } else {
+    // zorg dat het testwachtwoord klopt (handig na een reset)
+    await admin.auth.admin.updateUserById(user.id, { password });
     console.log(`• user bestaat al: ${email}`);
   }
 
   // zorg dat profielrol klopt (trigger zet 'm bij create, maar dit is idempotent)
   await admin.from("profiles").upsert({ id: user.id, role, full_name: fullName });
   return user;
+}
+
+async function ensureCustomerVehicleProject({
+  customerProfileId,
+  customerName,
+  customerEmail,
+  licensePlate,
+  make,
+  model,
+  year,
+  color,
+  mileage,
+  projectTitle,
+  projectType,
+  status,
+  price,
+  customerNotes,
+  createdBy,
+  completed = false,
+}) {
+  let { data: customer } = await admin
+    .from("customers")
+    .select("*")
+    .eq("profile_id", customerProfileId)
+    .maybeSingle();
+
+  if (!customer) {
+    const { data, error } = await admin
+      .from("customers")
+      .insert({ profile_id: customerProfileId, name: customerName, email: customerEmail })
+      .select()
+      .single();
+    if (error) throw error;
+    customer = data;
+    console.log(`✓ klant aangemaakt: ${customerName}`);
+  }
+
+  let { data: vehicle } = await admin
+    .from("vehicles")
+    .select("*")
+    .eq("customer_id", customer.id)
+    .eq("license_plate", licensePlate)
+    .maybeSingle();
+
+  if (!vehicle) {
+    const { data, error } = await admin
+      .from("vehicles")
+      .insert({ customer_id: customer.id, license_plate: licensePlate, make, model, year, color, mileage })
+      .select()
+      .single();
+    if (error) throw error;
+    vehicle = data;
+    console.log(`✓ auto aangemaakt: ${make} ${model}`);
+  }
+
+  const { data: existingProject } = await admin
+    .from("projects")
+    .select("id")
+    .eq("vehicle_id", vehicle.id)
+    .maybeSingle();
+
+  if (!existingProject) {
+    const { error } = await admin.from("projects").insert({
+      customer_id: customer.id,
+      vehicle_id: vehicle.id,
+      title: projectTitle,
+      type: projectType,
+      status,
+      price,
+      appointment_date: new Date().toISOString().slice(0, 10),
+      completed_at: completed ? new Date().toISOString() : null,
+      customer_notes: customerNotes,
+      created_by: createdBy,
+    });
+    if (error) throw error;
+    console.log(`✓ testproject aangemaakt: ${projectTitle}`);
+  }
 }
 
 async function main() {
@@ -137,10 +217,59 @@ async function main() {
     console.log("✓ demo project aangemaakt");
   }
 
+  // ---------- M7 Branding demo: Alexander (admin) + Alexander Koselka (klant) ----------
+  const alexanderAdmin = await ensureUser("alexander@m7branding.com", "admin", "Alexander", M7_PASSWORD);
+  const alexanderKlant = await ensureUser(
+    "alexander_koselka@hotmail.com",
+    "klant",
+    "Alexander Koselka",
+    M7_PASSWORD
+  );
+
+  await ensureCustomerVehicleProject({
+    customerProfileId: alexanderKlant.id,
+    customerName: "Alexander Koselka",
+    customerEmail: "alexander_koselka@hotmail.com",
+    licensePlate: "XX-001-M7",
+    make: "Renault",
+    model: "5 Alpine",
+    year: 2026,
+    color: "Alpine Blauw",
+    mileage: 15,
+    projectTitle: "Detailing — Renault 5 Alpine",
+    projectType: "detailing",
+    status: "offerte_verstuurd",
+    price: 895.0,
+    customerNotes: "Offerte verstuurd, we wachten op akkoord.",
+    createdBy: alexanderAdmin.id,
+  });
+
+  await ensureCustomerVehicleProject({
+    customerProfileId: alexanderKlant.id,
+    customerName: "Alexander Koselka",
+    customerEmail: "alexander_koselka@hotmail.com",
+    licensePlate: "XX-002-M7",
+    make: "Hyundai",
+    model: "Ioniq 9",
+    year: 2026,
+    color: "Titan Grijs",
+    mileage: 420,
+    projectTitle: "PPF volledige carrosserie — Hyundai Ioniq 9",
+    projectType: "ppf",
+    status: "afgerond",
+    price: 3450.0,
+    customerNotes: "Klaar — auto is opgehaald.",
+    createdBy: alexanderAdmin.id,
+    completed: true,
+  });
+
   console.log("\nKlaar. Testaccounts (wachtwoord voor alle: " + PASSWORD + "):");
   console.log("  admin@jurgh.test       → admin");
   console.log("  medewerker@jurgh.test  → medewerker");
   console.log("  klant@jurgh.test       → klant");
+  console.log("\nM7 Branding testaccounts (wachtwoord voor beide: " + M7_PASSWORD + "):");
+  console.log("  alexander@m7branding.com       → admin");
+  console.log("  alexander_koselka@hotmail.com  → klant (Renault 5 Alpine + Hyundai Ioniq 9)");
 }
 
 main().catch((e) => {

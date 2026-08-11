@@ -549,13 +549,17 @@ grant execute on function public.respond_extra_work(uuid, boolean) to authentica
 -- Draai DIT pas NA de migraties 0001 → 0002 → 0003.
 -- Plak dit volledige bestand in: Supabase Dashboard → SQL Editor → Run.
 --
--- Maakt 3 testaccounts aan + een demo-dossier. Volledig idempotent:
+-- Maakt testaccounts aan + demo-dossiers. Volledig idempotent:
 -- je mag het meerdere keren draaien zonder dubbele data.
 --
--- Wachtwoord voor ALLE testaccounts: JurghTest123!
+-- Wachtwoord voor de JURGH-testaccounts: JurghTest123!
 --   admin@jurgh.test       → admin
 --   medewerker@jurgh.test  → medewerker
 --   klant@jurgh.test       → klant (met demo-auto + project)
+--
+-- Wachtwoord voor de M7 Branding-testaccounts: 123123123
+--   alexander@m7branding.com       → admin
+--   alexander_koselka@hotmail.com  → klant (met 2 testprojecten)
 -- ============================================================
 
 -- ---------- 1. Testgebruikers in auth schema ----------
@@ -568,10 +572,12 @@ declare
 begin
   for rec in
     select * from (values
-      ('admin@jurgh.test',      'admin',      'JURGH Admin'),
-      ('medewerker@jurgh.test', 'medewerker', 'JURGH Medewerker'),
-      ('klant@jurgh.test',      'klant',      'Jan de Vries')
-    ) as t(email, role, full_name)
+      ('admin@jurgh.test',              'admin',      'JURGH Admin',       'JurghTest123!'),
+      ('medewerker@jurgh.test',         'medewerker', 'JURGH Medewerker',  'JurghTest123!'),
+      ('klant@jurgh.test',              'klant',      'Jan de Vries',      'JurghTest123!'),
+      ('alexander@m7branding.com',      'admin',      'Alexander',         '123123123'),
+      ('alexander_koselka@hotmail.com', 'klant',      'Alexander Koselka', '123123123')
+    ) as t(email, role, full_name, password)
   loop
     select id into uid from auth.users where email = rec.email;
 
@@ -585,7 +591,7 @@ begin
         confirmation_token, email_change, email_change_token_new, recovery_token
       ) values (
         '00000000-0000-0000-0000-000000000000', uid, 'authenticated', 'authenticated',
-        rec.email, crypt('JurghTest123!', gen_salt('bf')),
+        rec.email, crypt(rec.password, gen_salt('bf')),
         now(),
         '{"provider":"email","providers":["email"]}'::jsonb,
         jsonb_build_object('role', rec.role, 'full_name', rec.full_name),
@@ -600,6 +606,9 @@ begin
         jsonb_build_object('sub', uid::text, 'email', rec.email),
         'email', now(), now(), now()
       );
+    else
+      -- account bestaat al: zorg dat het testwachtwoord klopt (handig na een reset)
+      update auth.users set encrypted_password = crypt(rec.password, gen_salt('bf')) where id = uid;
     end if;
 
     -- zorg dat het profiel de juiste rol heeft (idempotent)
@@ -647,6 +656,63 @@ begin
       cust_id, veh_id, 'Glascoating First Class — Porsche 911', 'glascoating',
       'in_behandeling', 1895.00, current_date, current_date,
       'Welkom in je JURGH dossier. Hier volg je live de voortgang.', admin_uid
+    );
+  end if;
+end $$;
+
+-- ---------- 3. Testprojecten voor Alexander Koselka (M7 Branding demo) ----------
+do $$
+declare
+  klant_uid uuid;
+  admin_uid uuid;
+  cust_id   uuid;
+  veh1_id   uuid;
+  veh2_id   uuid;
+begin
+  select id into klant_uid from auth.users where email = 'alexander_koselka@hotmail.com';
+  select id into admin_uid from auth.users where email = 'alexander@m7branding.com';
+
+  -- klant-record gekoppeld aan het login-account
+  select id into cust_id from public.customers where profile_id = klant_uid;
+  if cust_id is null then
+    insert into public.customers (profile_id, name, email)
+    values (klant_uid, 'Alexander Koselka', 'alexander_koselka@hotmail.com')
+    returning id into cust_id;
+  end if;
+
+  -- testauto 1: Renault 5 Alpine — status vroeg in de flow (open offerte, rood)
+  select id into veh1_id from public.vehicles where customer_id = cust_id and license_plate = 'XX-001-M7';
+  if veh1_id is null then
+    insert into public.vehicles (customer_id, license_plate, make, model, year, color, mileage)
+    values (cust_id, 'XX-001-M7', 'Renault', '5 Alpine', 2026, 'Alpine Blauw', 15)
+    returning id into veh1_id;
+  end if;
+
+  if not exists (select 1 from public.projects where vehicle_id = veh1_id) then
+    insert into public.projects (
+      customer_id, vehicle_id, title, type, status, price,
+      appointment_date, customer_notes, created_by
+    ) values (
+      cust_id, veh1_id, 'Detailing — Renault 5 Alpine', 'detailing', 'offerte_verstuurd', 895.00,
+      current_date + 5, 'Offerte verstuurd, we wachten op akkoord.', admin_uid
+    );
+  end if;
+
+  -- testauto 2: Hyundai Ioniq 9 — status aan het eind van de flow (auto opgehaald, blauw)
+  select id into veh2_id from public.vehicles where customer_id = cust_id and license_plate = 'XX-002-M7';
+  if veh2_id is null then
+    insert into public.vehicles (customer_id, license_plate, make, model, year, color, mileage)
+    values (cust_id, 'XX-002-M7', 'Hyundai', 'Ioniq 9', 2026, 'Titan Grijs', 420)
+    returning id into veh2_id;
+  end if;
+
+  if not exists (select 1 from public.projects where vehicle_id = veh2_id) then
+    insert into public.projects (
+      customer_id, vehicle_id, title, type, status, price,
+      appointment_date, completed_at, customer_notes, created_by
+    ) values (
+      cust_id, veh2_id, 'PPF volledige carrosserie — Hyundai Ioniq 9', 'ppf', 'afgerond', 3450.00,
+      current_date - 3, now(), 'Klaar — auto is opgehaald.', admin_uid
     );
   end if;
 end $$;

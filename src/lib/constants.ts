@@ -86,12 +86,26 @@ export function statusOrder(status: ProjectStatus): number {
   return PROJECT_STATUSES.find((s) => s.value === status)?.order ?? 0;
 }
 
-// Kleur-tint voor de status badge
-export function statusTone(status: ProjectStatus): "green" | "red" | "neutral" | "amber" {
-  if (["afgerond", "gefactureerd", "klaar_voor_oplevering"].includes(status)) return "green";
-  if (["wacht_op_klant", "kwaliteitscontrole"].includes(status)) return "amber";
-  if (status === "gearchiveerd") return "neutral";
-  return "red";
+// Kleurverloop voor de status badge: rood (open offerte) → blauw (auto opgehaald),
+// volgt de volgorde van de statusflow hierboven.
+export const STATUS_COLOR: Record<ProjectStatus, string> = {
+  concept: "#ef4444",
+  offerte_aangevraagd: "#f43f5e",
+  offerte_verstuurd: "#f97316",
+  goedgekeurd: "#f59e0b",
+  afspraak_ingepland: "#eab308",
+  auto_ontvangen: "#a3e635",
+  in_behandeling: "#22c55e",
+  wacht_op_klant: "#10b981",
+  kwaliteitscontrole: "#14b8a6",
+  klaar_voor_oplevering: "#06b6d4",
+  afgerond: "#0ea5e9",
+  gefactureerd: "#3b82f6",
+  gearchiveerd: "#2563eb",
+};
+
+export function statusColor(status: ProjectStatus): string {
+  return STATUS_COLOR[status] ?? "#8a8a93";
 }
 
 export const DOCUMENT_TYPES: { value: DocumentType; label: string }[] = [

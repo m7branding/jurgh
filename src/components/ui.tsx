@@ -2,7 +2,7 @@ import Link from "next/link";
 import {
   STATUS_LABEL,
   statusOrder,
-  statusTone,
+  statusColor,
   STATUS_MAX_ORDER,
   type ProjectStatus,
 } from "@/lib/constants";
@@ -56,8 +56,26 @@ export function Badge({
   );
 }
 
+function hexToRgb(hex: string) {
+  const clean = hex.replace("#", "");
+  const bigint = parseInt(clean, 16);
+  return { r: (bigint >> 16) & 255, g: (bigint >> 8) & 255, b: bigint & 255 };
+}
+
 export function StatusBadge({ status }: { status: ProjectStatus }) {
-  return <Badge tone={statusTone(status)}>{STATUS_LABEL[status]}</Badge>;
+  const { r, g, b } = hexToRgb(statusColor(status));
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold"
+      style={{
+        backgroundColor: `rgba(${r}, ${g}, ${b}, 0.15)`,
+        color: `rgb(${r}, ${g}, ${b})`,
+        borderColor: `rgba(${r}, ${g}, ${b}, 0.35)`,
+      }}
+    >
+      {STATUS_LABEL[status]}
+    </span>
+  );
 }
 
 // ---------- Progress bar ----------

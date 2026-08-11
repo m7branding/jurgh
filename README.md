@@ -52,6 +52,13 @@ Testaccounts (wachtwoord voor alle: `JurghTest123!`):
 | `medewerker@jurgh.test` | Medewerker |
 | `klant@jurgh.test` | Klant (met demo-auto + project) |
 
+Daarnaast staan er twee M7 Branding-testaccounts klaar (wachtwoord voor beide: `123123123`):
+
+| E-mail | Rol |
+| --- | --- |
+| `alexander@m7branding.com` | Admin |
+| `alexander_koselka@hotmail.com` | Klant — met twee testprojecten: **Renault 5 Alpine** (status *Offerte verstuurd*, rood) en **Hyundai Ioniq 9** (status *Afgerond*, blauw) |
+
 ### 2. App online zetten via Netlify
 1. Koppel deze GitHub-repo in Netlify ("Import from Git"). Netlify draait zelf
    `npm install` + `npm run build` (de `@netlify/plugin-nextjs` staat al klaar).
