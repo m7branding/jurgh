@@ -575,6 +575,11 @@ alter table public.extra_work add constraint extra_work_pricing_mode_check
 -- (concept = nog niet verstuurd naar klant, alleen zichtbaar voor staff)
 alter type extra_work_status add value if not exists 'concept' before 'voorgesteld';
 
+-- Een nieuwe enum-waarde moet gecommit zijn voordat hij elders gebruikt mag
+-- worden (Postgres-beperking). Deze COMMIT sluit het impliciete transactie-
+-- blok van de SQL Editor af zodat 'concept' hieronder al bruikbaar is.
+commit;
+
 -- extra_work_read moet 'concept' ook afschermen voor de klant (naast intern_akkoord)
 drop policy if exists extra_work_read on public.extra_work;
 create policy extra_work_read on public.extra_work
