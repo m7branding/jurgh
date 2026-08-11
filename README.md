@@ -57,7 +57,7 @@ Daarnaast staan er twee M7 Branding-testaccounts klaar (wachtwoord voor beide: `
 | E-mail | Rol |
 | --- | --- |
 | `alexander@m7branding.com` | Admin |
-| `alexander_koselka@hotmail.com` | Klant — met twee testprojecten: **Renault 5 Alpine** (status *Offerte verstuurd*, rood) en **Hyundai Ioniq 9** (status *Afgerond*, blauw) |
+| `alexander_koselka@hotmail.com` | Klant |
 
 ### 2. App online zetten via Netlify
 1. Koppel deze GitHub-repo in Netlify ("Import from Git"). Netlify draait zelf

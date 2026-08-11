@@ -14,7 +14,7 @@
 --
 -- Wachtwoord voor de M7 Branding-testaccounts: 123123123
 --   alexander@m7branding.com       → admin
---   alexander_koselka@hotmail.com  → klant (met 2 testprojecten)
+--   alexander_koselka@hotmail.com  → klant
 -- ============================================================
 
 -- ---------- 1. Testgebruikers in auth schema ----------
@@ -111,63 +111,6 @@ begin
       cust_id, veh_id, 'Glascoating First Class — Porsche 911', 'glascoating',
       'in_behandeling', 1895.00, current_date, current_date,
       'Welkom in je JURGH dossier. Hier volg je live de voortgang.', admin_uid
-    );
-  end if;
-end $$;
-
--- ---------- 3. Testprojecten voor Alexander Koselka (M7 Branding demo) ----------
-do $$
-declare
-  klant_uid uuid;
-  admin_uid uuid;
-  cust_id   uuid;
-  veh1_id   uuid;
-  veh2_id   uuid;
-begin
-  select id into klant_uid from auth.users where email = 'alexander_koselka@hotmail.com';
-  select id into admin_uid from auth.users where email = 'alexander@m7branding.com';
-
-  -- klant-record gekoppeld aan het login-account
-  select id into cust_id from public.customers where profile_id = klant_uid;
-  if cust_id is null then
-    insert into public.customers (profile_id, name, email)
-    values (klant_uid, 'Alexander Koselka', 'alexander_koselka@hotmail.com')
-    returning id into cust_id;
-  end if;
-
-  -- testauto 1: Renault 5 Alpine — status vroeg in de flow (open offerte, rood)
-  select id into veh1_id from public.vehicles where customer_id = cust_id and license_plate = 'XX-001-M7';
-  if veh1_id is null then
-    insert into public.vehicles (customer_id, license_plate, make, model, year, color, mileage)
-    values (cust_id, 'XX-001-M7', 'Renault', '5 Alpine', 2026, 'Alpine Blauw', 15)
-    returning id into veh1_id;
-  end if;
-
-  if not exists (select 1 from public.projects where vehicle_id = veh1_id) then
-    insert into public.projects (
-      customer_id, vehicle_id, title, type, status, price,
-      appointment_date, customer_notes, created_by
-    ) values (
-      cust_id, veh1_id, 'Detailing — Renault 5 Alpine', 'detailing', 'offerte_verstuurd', 895.00,
-      current_date + 5, 'Offerte verstuurd, we wachten op akkoord.', admin_uid
-    );
-  end if;
-
-  -- testauto 2: Hyundai Ioniq 9 — status aan het eind van de flow (auto opgehaald, blauw)
-  select id into veh2_id from public.vehicles where customer_id = cust_id and license_plate = 'XX-002-M7';
-  if veh2_id is null then
-    insert into public.vehicles (customer_id, license_plate, make, model, year, color, mileage)
-    values (cust_id, 'XX-002-M7', 'Hyundai', 'Ioniq 9', 2026, 'Titan Grijs', 420)
-    returning id into veh2_id;
-  end if;
-
-  if not exists (select 1 from public.projects where vehicle_id = veh2_id) then
-    insert into public.projects (
-      customer_id, vehicle_id, title, type, status, price,
-      appointment_date, completed_at, customer_notes, created_by
-    ) values (
-      cust_id, veh2_id, 'PPF volledige carrosserie — Hyundai Ioniq 9', 'ppf', 'afgerond', 3450.00,
-      current_date - 3, now(), 'Klaar — auto is opgehaald.', admin_uid
     );
   end if;
 end $$;
