@@ -1,27 +1,39 @@
 "use client";
 
 import { useFormState, useFormStatus } from "react-dom";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   updateStatus,
   completeProject,
   addRemark,
   addWorkLog,
+  updateWorkLog,
   addExtraWork,
+  sendExtraWorkToCustomer,
   respondExtraWork,
   setExtraWorkStatus,
   uploadPhoto,
   uploadDocument,
   uploadVehiclePhoto,
   togglePhotoVisibility,
+  updateProjectExtras,
+  updateVehicleMileage,
+  addCatalogItem,
+  deleteCatalogItem,
 } from "@/app/actions/projects";
 import {
   PROJECT_STATUSES,
   PHOTO_LABELS,
   WORK_TYPES,
+  WORK_TYPE_LABEL,
   DOCUMENT_TYPES,
+  PRICING_MODES,
+  formatDate,
   type ProjectStatus,
+  type PricingMode,
+  type WorkType,
 } from "@/lib/constants";
+import { StatusBadge } from "@/components/ui";
 
 function Pending({ label, busy }: { label: string; busy?: string }) {
   const { pending } = useFormStatus();
@@ -32,38 +44,82 @@ function Pending({ label, busy }: { label: string; busy?: string }) {
   );
 }
 
-// ---------- Status bijwerken ----------
-export function StatusForm({
-  projectId,
-  current,
-  allowed,
-}: {
-  projectId: string;
-  current: ProjectStatus;
-  allowed?: ProjectStatus[]; // medewerker mag beperkte set
-}) {
-  const options = allowed
-    ? PROJECT_STATUSES.filter((s) => allowed.includes(s.value))
-    : PROJECT_STATUSES;
+// ---------- Status bijwerken (alleen admin) ----------
+export function StatusForm({ projectId, current }: { projectId: string; current: ProjectStatus }) {
+  const [status, setStatus] = useState<ProjectStatus>(current);
 
   return (
     <form action={updateStatus} className="space-y-3">
       <input type="hidden" name="project_id" value={projectId} />
       <div>
         <label className="label">Nieuwe status</label>
-        <select name="status" defaultValue={current} className="input">
-          {options.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
-            </option>
-          ))}
-        </select>
+        <div className="flex items-center gap-2">
+          <select
+            name="status"
+            value={status}
+            onChange={(e) => setStatus(e.target.value as ProjectStatus)}
+            className="input"
+          >
+            {PROJECT_STATUSES.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+          <StatusBadge status={status} />
+        </div>
       </div>
       <div>
         <label className="label">Toelichting (optioneel)</label>
         <input name="note" className="input" placeholder="bijv. polijsten afgerond" />
       </div>
       <Pending label="Status bijwerken" busy="Bijwerken…" />
+    </form>
+  );
+}
+
+// ---------- Leenauto / transport (admin, ook na aanmaken project) ----------
+export function ProjectExtrasForm({
+  projectId,
+  loanerCar,
+  loanerCarPlate,
+  transport,
+}: {
+  projectId: string;
+  loanerCar: boolean;
+  loanerCarPlate: string | null;
+  transport: boolean;
+}) {
+  const [checked, setChecked] = useState(loanerCar);
+  return (
+    <form action={updateProjectExtras} className="space-y-3">
+      <input type="hidden" name="project_id" value={projectId} />
+      <label className="flex items-center gap-2 text-sm text-jurgh-muted">
+        <input
+          type="checkbox"
+          name="loaner_car"
+          checked={checked}
+          onChange={(e) => setChecked(e.target.checked)}
+          className="accent-jurgh-red"
+        />
+        Leenauto meegegeven
+      </label>
+      {checked && (
+        <div>
+          <label className="label">Kenteken leenauto</label>
+          <input
+            name="loaner_car_plate"
+            defaultValue={loanerCarPlate ?? ""}
+            className="input uppercase"
+            placeholder="XX-002-X"
+          />
+        </div>
+      )}
+      <label className="flex items-center gap-2 text-sm text-jurgh-muted">
+        <input type="checkbox" name="transport" defaultChecked={transport} className="accent-jurgh-red" />
+        Transport (halen/brengen)
+      </label>
+      <Pending label="Opslaan" busy="Opslaan…" />
     </form>
   );
 }
@@ -155,6 +211,95 @@ export function WorkLogForm({ projectId }: { projectId: string }) {
   );
 }
 
+// ---------- Urenregistratie-rij: bekijken + (eigen log) bewerken ----------
+export function WorkLogRow({
+  log,
+  canEdit,
+}: {
+  log: {
+    id: string;
+    project_id: string;
+    log_date: string;
+    work_type: WorkType;
+    hours: number;
+    description: string | null;
+    employeeName: string;
+  };
+  canEdit: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [state, action] = useFormState(updateWorkLog, {} as { error?: string; ok?: boolean });
+
+  useEffect(() => {
+    if (state?.ok) setEditing(false);
+  }, [state]);
+
+  if (!editing) {
+    return (
+      <tr className="border-t border-jurgh-border">
+        <td className="py-2 pr-3 text-jurgh-muted">{formatDate(log.log_date)}</td>
+        <td className="py-2 pr-3">{WORK_TYPE_LABEL[log.work_type]}</td>
+        <td className="py-2 pr-3 font-semibold text-jurgh-text">{Number(log.hours).toFixed(2)}</td>
+        <td className="py-2 pr-3 text-jurgh-muted">{log.employeeName}</td>
+        <td className="py-2 text-jurgh-muted">
+          <div className="flex items-center justify-between gap-2">
+            <span>{log.description ?? "—"}</span>
+            {canEdit && (
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                className="shrink-0 text-xs font-medium text-jurgh-red hover:underline"
+              >
+                Bewerken
+              </button>
+            )}
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
+  return (
+    <tr className="border-t border-jurgh-border bg-jurgh-black/30">
+      <td colSpan={5} className="py-3">
+        <form action={action} className="grid gap-2 sm:grid-cols-5 sm:items-end">
+          <input type="hidden" name="work_log_id" value={log.id} />
+          <input type="hidden" name="project_id" value={log.project_id} />
+          <div>
+            <label className="label">Datum</label>
+            <input type="date" name="log_date" defaultValue={log.log_date} className="input" />
+          </div>
+          <div>
+            <label className="label">Type</label>
+            <select name="work_type" defaultValue={log.work_type} className="input">
+              {WORK_TYPES.map((w) => (
+                <option key={w.value} value={w.value}>
+                  {w.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="label">Uren</label>
+            <input type="number" step="0.25" min="0" name="hours" defaultValue={log.hours} className="input" />
+          </div>
+          <div>
+            <label className="label">Omschrijving</label>
+            <input name="description" defaultValue={log.description ?? ""} className="input" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Pending label="Opslaan" busy="Opslaan…" />
+            <button type="button" onClick={() => setEditing(false)} className="btn-ghost px-3 py-1.5 text-xs">
+              Annuleren
+            </button>
+          </div>
+        </form>
+        {state?.error && <p className="mt-2 text-xs text-jurgh-red">{state.error}</p>}
+      </td>
+    </tr>
+  );
+}
+
 // ---------- Foto uploaden ----------
 export function PhotoUploadForm({ projectId }: { projectId: string }) {
   const [state, action] = useFormState(uploadPhoto, {} as { error?: string; ok?: boolean });
@@ -239,39 +384,151 @@ export function DocumentUploadForm({ projectId }: { projectId: string }) {
   );
 }
 
-// ---------- Meerwerk toevoegen (staff) ----------
-export function ExtraWorkForm({ projectId }: { projectId: string }) {
+type CatalogItem = {
+  id: string;
+  title: string;
+  description: string | null;
+  price: number | null;
+  estimated_hours: number | null;
+  pricing_mode: string;
+};
+
+// ---------- Meerwerk toevoegen als concept (admin) ----------
+export function ExtraWorkForm({ projectId, catalog = [] }: { projectId: string; catalog?: CatalogItem[] }) {
   const [state, action] = useFormState(addExtraWork, {} as { error?: string; ok?: boolean });
   const ref = useRef<HTMLFormElement>(null);
+  const [catalogId, setCatalogId] = useState("");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [price, setPrice] = useState("");
+  const [hours, setHours] = useState("");
+  const [pricingMode, setPricingMode] = useState<PricingMode>("totaal");
+
   useEffect(() => {
-    if (state?.ok) ref.current?.reset();
+    if (state?.ok) {
+      ref.current?.reset();
+      setCatalogId("");
+      setTitle("");
+      setDescription("");
+      setPrice("");
+      setHours("");
+      setPricingMode("totaal");
+    }
   }, [state]);
+
+  function applyCatalogItem(id: string) {
+    setCatalogId(id);
+    const item = catalog.find((c) => c.id === id);
+    if (item) {
+      setTitle(item.title);
+      setDescription(item.description ?? "");
+      setPrice(item.price != null ? String(item.price) : "");
+      setHours(item.estimated_hours != null ? String(item.estimated_hours) : "");
+      setPricingMode((item.pricing_mode as PricingMode) || "totaal");
+    }
+  }
+
   return (
     <form ref={ref} action={action} className="space-y-3">
       <input type="hidden" name="project_id" value={projectId} />
+      {catalog.length > 0 && (
+        <div>
+          <label className="label">Uit catalogus kiezen (optioneel)</label>
+          <select className="input" value={catalogId} onChange={(e) => applyCatalogItem(e.target.value)}>
+            <option value="">— Vrije invoer —</option>
+            {catalog.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.title}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       <div>
         <label className="label">Titel</label>
-        <input name="title" required className="input" placeholder="bijv. Extra polijststap motorkap" />
+        <input
+          name="title"
+          required
+          className="input"
+          placeholder="bijv. Extra polijststap motorkap"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
       </div>
       <div>
         <label className="label">Omschrijving</label>
-        <textarea name="description" rows={2} className="input" />
+        <textarea
+          name="description"
+          rows={2}
+          className="input"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="label">Prijs (€, − voor minderwerk)</label>
-          <input name="price" type="number" step="0.01" className="input" placeholder="125.00" />
+          <label className="label">Prijs (€, excl. btw, − voor minderwerk)</label>
+          <input
+            name="price"
+            type="number"
+            step="0.01"
+            className="input"
+            placeholder="125.00"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+          />
         </div>
         <div>
           <label className="label">Extra uren (schatting)</label>
-          <input name="estimated_hours" type="number" step="0.25" min="0" className="input" placeholder="1.5" />
+          <input
+            name="estimated_hours"
+            type="number"
+            step="0.25"
+            min="0"
+            className="input"
+            placeholder="1.5"
+            value={hours}
+            onChange={(e) => setHours(e.target.value)}
+          />
         </div>
       </div>
-      <div className="flex items-center gap-3">
-        <Pending label="Meerwerk voorstellen" busy="Opslaan…" />
-        {state?.error && <span className="text-sm text-jurgh-red">{state.error}</span>}
-        {state?.ok && <span className="text-sm text-jurgh-green">Voorgesteld ✓ — klant kan dit nu accepteren.</span>}
+      <div>
+        <label className="label">Prijsmodel</label>
+        <select
+          name="pricing_mode"
+          className="input"
+          value={pricingMode}
+          onChange={(e) => setPricingMode(e.target.value as PricingMode)}
+        >
+          {PRICING_MODES.map((p) => (
+            <option key={p.value} value={p.value}>
+              {p.label}
+            </option>
+          ))}
+        </select>
       </div>
+      <div className="flex items-center gap-3">
+        <Pending label="Opslaan als concept" busy="Opslaan…" />
+        {state?.error && <span className="text-sm text-jurgh-red">{state.error}</span>}
+        {state?.ok && (
+          <span className="text-sm text-jurgh-green">
+            Concept opgeslagen ✓ — verstuur naar de klant zodra je klaar bent.
+          </span>
+        )}
+      </div>
+    </form>
+  );
+}
+
+// Admin: concept-meerwerk versturen naar de klant
+export function ExtraWorkSendButton({ id, projectId }: { id: string; projectId: string }) {
+  return (
+    <form action={sendExtraWorkToCustomer}>
+      <input type="hidden" name="extra_work_id" value={id} />
+      <input type="hidden" name="project_id" value={projectId} />
+      <button type="submit" className="btn-primary px-3 py-1.5 text-xs">
+        Versturen naar klant
+      </button>
     </form>
   );
 }
@@ -321,6 +578,7 @@ export function ExtraWorkStatusControl({
       <input type="hidden" name="extra_work_id" value={id} />
       <input type="hidden" name="project_id" value={projectId} />
       <select name="status" defaultValue={current} className="input max-w-[170px] py-1.5 text-xs">
+        <option value="concept">Concept</option>
         <option value="voorgesteld">Voorgesteld</option>
         <option value="intern_akkoord">Intern akkoord</option>
         <option value="klant_akkoord">Klant akkoord</option>
@@ -329,6 +587,63 @@ export function ExtraWorkStatusControl({
       </select>
       <button type="submit" className="btn-ghost px-3 py-1.5 text-xs">
         Opslaan
+      </button>
+    </form>
+  );
+}
+
+// ---------- Meerwerk-catalogus beheren (admin) ----------
+export function CatalogItemForm() {
+  const [state, action] = useFormState(addCatalogItem, {} as { error?: string; ok?: boolean });
+  const ref = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    if (state?.ok) ref.current?.reset();
+  }, [state]);
+  return (
+    <form ref={ref} action={action} className="space-y-3">
+      <div>
+        <label className="label">Titel</label>
+        <input name="title" required className="input" placeholder="bijv. Extra polijststap" />
+      </div>
+      <div>
+        <label className="label">Omschrijving</label>
+        <textarea name="description" rows={2} className="input" />
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        <div>
+          <label className="label">Prijs (€)</label>
+          <input name="price" type="number" step="0.01" className="input" placeholder="125.00" />
+        </div>
+        <div>
+          <label className="label">Uren</label>
+          <input name="estimated_hours" type="number" step="0.25" min="0" className="input" placeholder="1.5" />
+        </div>
+        <div>
+          <label className="label">Prijsmodel</label>
+          <select name="pricing_mode" className="input" defaultValue="totaal">
+            {PRICING_MODES.map((p) => (
+              <option key={p.value} value={p.value}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <Pending label="Toevoegen aan catalogus" busy="Opslaan…" />
+        {state?.error && <span className="text-sm text-jurgh-red">{state.error}</span>}
+        {state?.ok && <span className="text-sm text-jurgh-green">Toegevoegd ✓</span>}
+      </div>
+    </form>
+  );
+}
+
+export function DeleteCatalogItemButton({ id }: { id: string }) {
+  return (
+    <form action={deleteCatalogItem}>
+      <input type="hidden" name="id" value={id} />
+      <button type="submit" className="btn-ghost px-3 py-1.5 text-xs">
+        Verwijderen
       </button>
     </form>
   );
@@ -359,6 +674,26 @@ export function VehiclePhotoForm({
       <Pending label={hasPhoto ? "Foto vervangen" : "Auto-foto uploaden"} busy="Uploaden…" />
       {state?.error && <span className="text-xs text-jurgh-red">{state.error}</span>}
       {state?.ok && <span className="text-xs text-jurgh-green">Foto opgeslagen ✓</span>}
+    </form>
+  );
+}
+
+// ---------- Km-stand bijwerken (op autoniveau) ----------
+export function MileageForm({ vehicleId, mileage }: { vehicleId: string; mileage: number | null }) {
+  return (
+    <form action={updateVehicleMileage} className="flex flex-wrap items-end gap-2">
+      <input type="hidden" name="vehicle_id" value={vehicleId} />
+      <div>
+        <label className="label">Km-stand</label>
+        <input
+          name="mileage"
+          type="number"
+          defaultValue={mileage ?? ""}
+          className="input max-w-[160px]"
+          placeholder="8400"
+        />
+      </div>
+      <Pending label="Opslaan" busy="Opslaan…" />
     </form>
   );
 }

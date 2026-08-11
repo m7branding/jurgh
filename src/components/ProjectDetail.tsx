@@ -5,27 +5,30 @@ import {
   getRemarks,
   getWorkLogs,
   getExtraWork,
+  getExtraWorkCatalog,
   getPhotos,
   getDocuments,
   vehicleTitle,
 } from "@/lib/data";
+import { getSessionProfile } from "@/lib/auth";
 import {
   PROJECT_TYPE_LABEL,
   STATUS_LABEL,
   PHOTO_LABEL,
-  WORK_TYPE_LABEL,
   DOCUMENT_TYPE_LABEL,
   EXTRA_WORK_STATUS_LABEL,
+  PRICING_MODE_LABEL,
   extraWorkTone,
   formatPrice,
+  priceInclBtw,
   formatDate,
   formatDateTime,
   type ProjectType,
   type ProjectStatus,
   type PhotoLabel,
-  type WorkType,
   type DocumentType,
   type ExtraWorkStatus,
+  type PricingMode,
 } from "@/lib/constants";
 import {
   StatusBadge,
@@ -35,6 +38,7 @@ import {
   Check,
   SectionTitle,
   EmptyState,
+  Collapsible,
 } from "@/components/ui";
 import {
   StatusForm,
@@ -42,24 +46,18 @@ import {
   RemarkForm,
   WorkLogForm,
   ExtraWorkForm,
+  ExtraWorkSendButton,
   ExtraWorkRespond,
   ExtraWorkStatusControl,
   PhotoUploadForm,
   DocumentUploadForm,
   VehiclePhotoForm,
   PhotoVisibilityToggle,
+  ProjectExtrasForm,
+  WorkLogRow,
 } from "@/components/forms/StaffForms";
 
 type Mode = "admin" | "medewerker" | "klant";
-
-// Statussen die een medewerker zelf mag zetten (sectie 2)
-const MEDEWERKER_STATUSES: ProjectStatus[] = [
-  "auto_ontvangen",
-  "in_behandeling",
-  "wacht_op_klant",
-  "kwaliteitscontrole",
-  "klaar_voor_oplevering",
-];
 
 export async function ProjectDetail({
   projectId,
@@ -76,19 +74,28 @@ export async function ProjectDetail({
   const isStaff = mode !== "klant";
   const isAdmin = mode === "admin";
 
-  const [history, remarks, photos, documents, workLogs, extraWork] = await Promise.all([
-    getStatusHistory(projectId),
-    getRemarks(projectId),
-    getPhotos(projectId),
-    getDocuments(projectId),
-    isStaff ? getWorkLogs(projectId) : Promise.resolve([] as any[]),
-    getExtraWork(projectId),
-  ]);
+  const isMedewerker = mode === "medewerker";
+
+  const [history, remarks, photos, documents, workLogs, extraWork, extraWorkCatalog, sessionProfile] =
+    await Promise.all([
+      getStatusHistory(projectId),
+      getRemarks(projectId),
+      getPhotos(projectId),
+      isMedewerker ? Promise.resolve([] as any[]) : getDocuments(projectId),
+      isStaff ? getWorkLogs(projectId) : Promise.resolve([] as any[]),
+      getExtraWork(projectId),
+      isAdmin ? getExtraWorkCatalog() : Promise.resolve([] as any[]),
+      isStaff ? getSessionProfile() : Promise.resolve(null),
+    ]);
 
   const v = project.vehicles;
   const c = project.customers;
   const totalHours = workLogs.reduce((s: number, w: any) => s + Number(w.hours || 0), 0);
-  const isMedewerker = mode === "medewerker";
+
+  // Prijzen worden excl. btw ingevoerd; particuliere klant (niet-zakelijk) ziet incl. btw.
+  const showInclBtw = mode === "klant" && !c?.is_business;
+  const displayPrice = (value: number | null | undefined) =>
+    formatPrice(showInclBtw ? priceInclBtw(value) : value);
 
   // Urenregistratie-kaart: voor medewerkers bovenaan en uitgelicht, met het
   // logformulier direct bovenaan voor snel loggen.
@@ -118,13 +125,19 @@ export async function ProjectDetail({
             </thead>
             <tbody>
               {workLogs.map((w: any) => (
-                <tr key={w.id} className="border-t border-jurgh-border">
-                  <td className="py-2 pr-3 text-jurgh-muted">{formatDate(w.log_date)}</td>
-                  <td className="py-2 pr-3">{WORK_TYPE_LABEL[w.work_type as WorkType]}</td>
-                  <td className="py-2 pr-3 font-semibold text-jurgh-text">{Number(w.hours).toFixed(2)}</td>
-                  <td className="py-2 pr-3 text-jurgh-muted">{w.profiles?.full_name ?? "—"}</td>
-                  <td className="py-2 text-jurgh-muted">{w.description ?? "—"}</td>
-                </tr>
+                <WorkLogRow
+                  key={w.id}
+                  log={{
+                    id: w.id,
+                    project_id: projectId,
+                    log_date: w.log_date,
+                    work_type: w.work_type,
+                    hours: w.hours,
+                    description: w.description,
+                    employeeName: w.profiles?.full_name ?? "—",
+                  }}
+                  canEdit={isAdmin || w.employee_id === sessionProfile?.id}
+                />
               ))}
             </tbody>
           </table>
@@ -150,6 +163,12 @@ export async function ProjectDetail({
                   <Check className="h-3 w-3" /> Compleet
                 </Badge>
               )}
+              {project.loaner_car && (
+                <Badge tone="neutral">
+                  🚗 Leenauto{project.loaner_car_plate ? ` · ${project.loaner_car_plate}` : ""}
+                </Badge>
+              )}
+              {project.transport && <Badge tone="neutral">🚛 Transport</Badge>}
             </div>
             <h1 className="mt-3 text-2xl font-bold text-jurgh-text">{project.title}</h1>
             <p className="mt-1 text-jurgh-muted">
@@ -160,13 +179,21 @@ export async function ProjectDetail({
             </p>
 
             <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
-              <Field label="Klant" value={c?.name} />
+              <Field label="Klant" value={c?.company_name ? `${c.name} (${c.company_name})` : c?.name} />
+              {isStaff && c?.phone && <Field label="Telefoon klant" value={c.phone} />}
+              {isStaff && c?.email && <Field label="E-mail klant" value={c.email} />}
               {v?.year && <Field label="Bouwjaar" value={String(v.year)} />}
               {v?.color && <Field label="Kleur" value={v.color} />}
               {v?.mileage != null && <Field label="Km-stand" value={v.mileage.toLocaleString("nl-NL")} />}
               <Field label="Afspraak" value={formatDate(project.appointment_date)} />
               <Field label="Verwachte oplevering" value={formatDate(project.expected_delivery_date)} />
-              {isAdmin && <Field label="Prijs" value={formatPrice(project.price)} />}
+              {isAdmin && <Field label="Prijs (excl. btw)" value={formatPrice(project.price)} />}
+              {mode === "klant" && project.price != null && (
+                <Field
+                  label={showInclBtw ? "Prijs (incl. btw)" : "Prijs (excl. btw)"}
+                  value={displayPrice(project.price)}
+                />
+              )}
             </dl>
 
             <div className="mt-6">
@@ -212,14 +239,12 @@ export async function ProjectDetail({
           {/* Medewerker: loggen bovenaan en uitgelicht */}
           {isMedewerker && workLogSection}
 
-          <section className="card p-6">
-            <SectionTitle>Tijdlijn</SectionTitle>
+          <Collapsible title="Tijdlijn">
             <Timeline history={history} remarks={remarks} showHidden={isStaff} />
-          </section>
+          </Collapsible>
 
           {/* Bijzonderheden */}
-          <section className="card p-6">
-            <SectionTitle>Bijzonderheden & opmerkingen</SectionTitle>
+          <Collapsible title="Bijzonderheden & opmerkingen">
             {remarks.length === 0 ? (
               <p className="text-sm text-jurgh-muted">Nog geen bijzonderheden vastgelegd.</p>
             ) : (
@@ -244,11 +269,10 @@ export async function ProjectDetail({
                 <RemarkForm projectId={projectId} />
               </div>
             )}
-          </section>
+          </Collapsible>
 
           {/* Meerwerk / minderwerk */}
-          <section className="card p-6">
-            <SectionTitle>Meerwerk &amp; extra werk</SectionTitle>
+          <Collapsible title="Meerwerk & extra werk">
             {extraWork.length === 0 ? (
               <p className="text-sm text-jurgh-muted">
                 {isStaff
@@ -266,7 +290,9 @@ export async function ProjectDetail({
                           <p className="mt-0.5 text-sm text-jurgh-muted">{e.description}</p>
                         )}
                         <p className="mt-1 text-xs text-jurgh-muted">
-                          {formatPrice(Number(e.price))}
+                          {displayPrice(Number(e.price))}
+                          {showInclBtw ? " incl. btw" : ""}
+                          {" "}({PRICING_MODE_LABEL[(e.pricing_mode as PricingMode) || "totaal"]})
                           {Number(e.estimated_hours) > 0 ? ` · ${Number(e.estimated_hours)} u extra` : ""}
                         </p>
                       </div>
@@ -281,8 +307,14 @@ export async function ProjectDetail({
                         <ExtraWorkRespond id={e.id} projectId={projectId} />
                       </div>
                     )}
-                    {/* Staff: status beheren */}
-                    {isStaff && (
+                    {/* Admin: concept versturen naar klant */}
+                    {isAdmin && e.status === "concept" && (
+                      <div className="mt-3 border-t border-jurgh-border pt-3">
+                        <ExtraWorkSendButton id={e.id} projectId={projectId} />
+                      </div>
+                    )}
+                    {/* Admin: status beheren */}
+                    {isAdmin && (
                       <div className="mt-3 border-t border-jurgh-border pt-3">
                         <ExtraWorkStatusControl id={e.id} projectId={projectId} current={e.status} />
                       </div>
@@ -291,12 +323,12 @@ export async function ProjectDetail({
                 ))}
               </ul>
             )}
-            {isStaff && (
+            {isAdmin && (
               <div className="mt-4 border-t border-jurgh-border pt-4">
-                <ExtraWorkForm projectId={projectId} />
+                <ExtraWorkForm projectId={projectId} catalog={extraWorkCatalog} />
               </div>
             )}
-          </section>
+          </Collapsible>
 
           {/* Admin: urenregistratie in normale positie */}
           {isAdmin && workLogSection}
@@ -312,26 +344,33 @@ export async function ProjectDetail({
 
         {/* ---------- Rechterkolom: acties, foto's, documenten ---------- */}
         <div className="space-y-6">
-          {/* Status bijwerken */}
-          {isStaff && (
-            <section className="card p-6">
-              <SectionTitle>Status bijwerken</SectionTitle>
-              <StatusForm
-                projectId={projectId}
-                current={project.status as ProjectStatus}
-                allowed={isAdmin ? undefined : MEDEWERKER_STATUSES}
-              />
-              {isAdmin && project.status !== "afgerond" && (
+          {/* Status bijwerken (alleen admin) */}
+          {isAdmin && (
+            <Collapsible title="Status bijwerken">
+              <StatusForm projectId={projectId} current={project.status as ProjectStatus} />
+              {project.status !== "afgerond" && (
                 <div className="mt-4 border-t border-jurgh-border pt-4">
                   <CompleteButton projectId={projectId} />
                 </div>
               )}
+            </Collapsible>
+          )}
+
+          {/* Leenauto / transport (admin) */}
+          {isAdmin && (
+            <section className="card p-6">
+              <SectionTitle>Leenauto &amp; transport</SectionTitle>
+              <ProjectExtrasForm
+                projectId={projectId}
+                loanerCar={project.loaner_car}
+                loanerCarPlate={project.loaner_car_plate}
+                transport={project.transport}
+              />
             </section>
           )}
 
           {/* Foto's */}
-          <section className="card p-6">
-            <SectionTitle>Foto's</SectionTitle>
+          <Collapsible title="Foto's">
             {photos.length === 0 ? (
               <p className="text-sm text-jurgh-muted">Nog geen foto's beschikbaar.</p>
             ) : (
@@ -364,11 +403,11 @@ export async function ProjectDetail({
                 <PhotoUploadForm projectId={projectId} />
               </div>
             )}
-          </section>
+          </Collapsible>
 
-          {/* Documenten */}
-          <section className="card p-6">
-            <SectionTitle>Documenten</SectionTitle>
+          {/* Documenten (niet zichtbaar voor medewerker) */}
+          {!isMedewerker && (
+          <Collapsible title="Documenten">
             {documents.length === 0 ? (
               <p className="text-sm text-jurgh-muted">Nog geen documenten beschikbaar.</p>
             ) : (
@@ -393,12 +432,13 @@ export async function ProjectDetail({
                 ))}
               </ul>
             )}
-            {isStaff && (
+            {isAdmin && (
               <div className="mt-4 border-t border-jurgh-border pt-4">
                 <DocumentUploadForm projectId={projectId} />
               </div>
             )}
-          </section>
+          </Collapsible>
+          )}
         </div>
       </div>
     </div>
@@ -423,13 +463,14 @@ function Timeline({
   remarks: any[];
   showHidden: boolean;
 }) {
-  type Item = { id: string; at: string; kind: "status" | "remark"; text: string };
+  type Item = { id: string; at: string; kind: "status" | "remark"; text: string; by?: string };
   const items: Item[] = [
     ...history.map((h: any) => ({
       id: "s" + h.id,
       at: h.created_at,
       kind: "status" as const,
       text: STATUS_LABEL[h.status as ProjectStatus] + (h.note ? ` — ${h.note}` : ""),
+      by: h.profiles?.full_name || undefined,
     })),
     ...remarks
       .filter((r: any) => showHidden || r.visible_to_customer)
@@ -454,7 +495,10 @@ function Timeline({
               it.kind === "status" ? "bg-jurgh-red" : "bg-jurgh-gold"
             }`}
           />
-          <p className="text-xs text-jurgh-muted">{formatDateTime(it.at)}</p>
+          <p className="text-xs text-jurgh-muted">
+            {formatDateTime(it.at)}
+            {it.by ? ` · door ${it.by}` : ""}
+          </p>
           <p className="text-sm text-jurgh-text">{it.text}</p>
         </li>
       ))}

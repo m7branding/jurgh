@@ -56,6 +56,9 @@ export default async function AdminAutosPage() {
                     {projectCount} project{projectCount === 1 ? "" : "en"} · {doneCount} afgerond
                   </p>
                   <div className="flex gap-2 border-t border-jurgh-border pt-3">
+                    <Link href={`/admin/autos/${v.id}`} className="btn-ghost px-3 py-1.5 text-xs">
+                      Bekijk auto
+                    </Link>
                     <Link href={`/passport/${v.id}`} target="_blank" className="btn-ghost px-3 py-1.5 text-xs">
                       🛡️ Passport
                     </Link>

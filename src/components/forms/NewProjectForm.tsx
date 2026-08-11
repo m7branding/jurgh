@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { createProject } from "@/app/actions/projects";
-import { PROJECT_TYPES, PROJECT_STATUSES } from "@/lib/constants";
+import { PROJECT_TYPES, PROJECT_STATUSES, type ProjectStatus } from "@/lib/constants";
+import { StatusBadge } from "@/components/ui";
 
 type CustomerOption = {
   id: string;
@@ -25,6 +26,9 @@ export function NewProjectForm({ customers }: { customers: CustomerOption[] }) {
   const [state, action] = useFormState(createProject, { error: "" } as { error?: string });
   const [customerId, setCustomerId] = useState("");
   const [vehicleId, setVehicleId] = useState("");
+  const [status, setStatus] = useState<ProjectStatus>("concept");
+  const [isBusiness, setIsBusiness] = useState(false);
+  const [loanerCar, setLoanerCar] = useState(false);
 
   const selectedCustomer = customers.find((c) => c.id === customerId);
   const newCustomer = customerId === "";
@@ -65,6 +69,24 @@ export function NewProjectForm({ customers }: { customers: CustomerOption[] }) {
                 <label className="label">E-mail klant</label>
                 <input name="customer_email" type="email" className="input" placeholder="jan@voorbeeld.nl" />
               </div>
+              <div className="sm:col-span-2">
+                <label className="flex items-center gap-2 text-sm text-jurgh-muted">
+                  <input
+                    type="checkbox"
+                    name="is_business"
+                    checked={isBusiness}
+                    onChange={(e) => setIsBusiness(e.target.checked)}
+                    className="accent-jurgh-red"
+                  />
+                  Zakelijke klant
+                </label>
+              </div>
+              {isBusiness && (
+                <div className="sm:col-span-2">
+                  <label className="label">Bedrijfsnaam</label>
+                  <input name="company_name" className="input" placeholder="Jurgh Detailing B.V." />
+                </div>
+              )}
             </>
           )}
         </div>
@@ -154,16 +176,24 @@ export function NewProjectForm({ customers }: { customers: CustomerOption[] }) {
           </div>
           <div>
             <label className="label">Status</label>
-            <select name="status" className="input" defaultValue="concept">
-              {PROJECT_STATUSES.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center gap-2">
+              <select
+                name="status"
+                className="input"
+                value={status}
+                onChange={(e) => setStatus(e.target.value as ProjectStatus)}
+              >
+                {PROJECT_STATUSES.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+              <StatusBadge status={status} />
+            </div>
           </div>
           <div>
-            <label className="label">Prijs (excl. korting)</label>
+            <label className="label">Prijs (excl. btw, excl. korting)</label>
             <input name="price" type="number" step="0.01" className="input" placeholder="1895.00" />
           </div>
           <div>
@@ -189,6 +219,30 @@ export function NewProjectForm({ customers }: { customers: CustomerOption[] }) {
           <div className="sm:col-span-2">
             <label className="label">Interne notities</label>
             <textarea name="internal_notes" rows={2} className="input" />
+          </div>
+          <div>
+            <label className="flex items-center gap-2 text-sm text-jurgh-muted">
+              <input
+                type="checkbox"
+                name="loaner_car"
+                checked={loanerCar}
+                onChange={(e) => setLoanerCar(e.target.checked)}
+                className="accent-jurgh-red"
+              />
+              Leenauto meegegeven
+            </label>
+          </div>
+          {loanerCar && (
+            <div>
+              <label className="label">Kenteken leenauto</label>
+              <input name="loaner_car_plate" className="input uppercase" placeholder="XX-002-X" />
+            </div>
+          )}
+          <div>
+            <label className="flex items-center gap-2 text-sm text-jurgh-muted">
+              <input type="checkbox" name="transport" className="accent-jurgh-red" />
+              Transport (halen/brengen)
+            </label>
           </div>
         </div>
       </section>

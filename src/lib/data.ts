@@ -18,6 +18,9 @@ export type Customer = {
   email: string | null;
   phone: string | null;
   profile_id: string | null;
+  company_name: string | null;
+  is_business: boolean;
+  reminders_enabled: boolean;
 };
 
 export type Project = {
@@ -37,6 +40,9 @@ export type Project = {
   created_at: string;
   customer_id: string;
   vehicle_id: string;
+  loaner_car: boolean;
+  loaner_car_plate: string | null;
+  transport: boolean;
   customers?: Customer;
   vehicles?: Vehicle;
 };
@@ -68,7 +74,7 @@ export async function getStatusHistory(projectId: string) {
   const supabase = createClient();
   const { data } = await supabase
     .from("project_status_history")
-    .select("*")
+    .select("*, profiles:created_by(full_name)")
     .eq("project_id", projectId)
     .order("created_at", { ascending: false });
   return data ?? [];
@@ -94,6 +100,15 @@ export async function getWorkLogs(projectId: string) {
   return data ?? [];
 }
 
+export async function getExtraWorkCatalog() {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("extra_work_catalog")
+    .select("*")
+    .order("title");
+  return data ?? [];
+}
+
 export async function getExtraWork(projectId: string) {
   const supabase = createClient();
   const { data } = await supabase
@@ -115,6 +130,15 @@ export async function listAllWorkLogs() {
     )
     .order("log_date", { ascending: false })
     .limit(500);
+  return data ?? [];
+}
+
+export async function listCustomersOverview() {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("customers")
+    .select("*, vehicles(id, license_plate, make, model), projects(id, status)")
+    .order("name");
   return data ?? [];
 }
 
@@ -249,6 +273,26 @@ export async function listCustomersWithVehicles() {
     .select("id, name, email, profile_id, vehicles(id, license_plate, make, model)")
     .order("name");
   return data ?? [];
+}
+
+export async function getVehicleWithProjects(
+  vehicleId: string
+): Promise<{ vehicle: Vehicle & { customers?: Customer }; projects: Project[] } | null> {
+  const supabase = createClient();
+  const { data: vehicle } = await supabase
+    .from("vehicles")
+    .select("*, customers:customer_id(*)")
+    .eq("id", vehicleId)
+    .maybeSingle();
+  if (!vehicle) return null;
+
+  const { data: projects } = await supabase
+    .from("projects")
+    .select(PROJECT_SELECT)
+    .eq("vehicle_id", vehicleId)
+    .order("created_at", { ascending: false });
+
+  return { vehicle, projects: (projects as Project[]) ?? [] };
 }
 
 export function vehicleTitle(v?: Vehicle | null): string {

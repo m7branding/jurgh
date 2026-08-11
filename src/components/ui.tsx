@@ -164,6 +164,30 @@ export function StatCard({
   );
 }
 
+// ---------- Uitklapbare sectie (mobiel: dicht, desktop: standaard open) ----------
+export function Collapsible({
+  title,
+  action,
+  children,
+}: {
+  title: React.ReactNode;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <details className="card group p-6 open:pb-6" open>
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 marker:content-none [&::-webkit-details-marker]:hidden">
+        <span className="flex items-center gap-2 text-lg font-bold text-jurgh-text">
+          <span className="inline-block text-jurgh-muted transition-transform group-open:rotate-90">›</span>
+          {title}
+        </span>
+        {action}
+      </summary>
+      <div className="mt-4">{children}</div>
+    </details>
+  );
+}
+
 // ---------- Section heading ----------
 export function SectionTitle({
   children,

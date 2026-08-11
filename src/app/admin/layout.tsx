@@ -4,8 +4,10 @@ import { PortalShell, type NavItem } from "@/components/PortalShell";
 const nav: NavItem[] = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/projecten", label: "Projecten" },
+  { href: "/admin/klanten", label: "Klanten" },
   { href: "/admin/autos", label: "Auto's" },
   { href: "/admin/uren", label: "Uren & werk" },
+  { href: "/admin/catalogus", label: "Meerwerk-catalogus" },
   { href: "/admin/projecten/nieuw", label: "Nieuw project" },
 ];
 

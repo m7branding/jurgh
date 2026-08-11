@@ -153,6 +153,7 @@ export const WORK_TYPE_LABEL: Record<WorkType, string> = Object.fromEntries(
 ) as Record<WorkType, string>;
 
 export type ExtraWorkStatus =
+  | "concept"
   | "voorgesteld"
   | "intern_akkoord"
   | "klant_akkoord"
@@ -160,11 +161,24 @@ export type ExtraWorkStatus =
   | "afgewezen";
 
 export const EXTRA_WORK_STATUS_LABEL: Record<ExtraWorkStatus, string> = {
+  concept: "Concept",
   voorgesteld: "Voorgesteld",
   intern_akkoord: "Intern akkoord",
   klant_akkoord: "Klant akkoord",
   uitgevoerd: "Uitgevoerd",
   afgewezen: "Afgewezen",
+};
+
+export type PricingMode = "per_uur" | "totaal";
+
+export const PRICING_MODES: { value: PricingMode; label: string }[] = [
+  { value: "totaal", label: "Totaalbedrag" },
+  { value: "per_uur", label: "Per uur" },
+];
+
+export const PRICING_MODE_LABEL: Record<PricingMode, string> = {
+  totaal: "totaal",
+  per_uur: "per uur",
 };
 
 export function extraWorkTone(status: ExtraWorkStatus): "green" | "red" | "amber" | "neutral" {
@@ -180,6 +194,15 @@ export function formatPrice(value: number | null | undefined): string {
     style: "currency",
     currency: "EUR",
   }).format(value);
+}
+
+// Prijzen worden altijd excl. btw ingevoerd. Particuliere klanten (niet-zakelijk)
+// zien de prijs incl. btw; zakelijke klanten en staff zien 'm excl. btw.
+export const BTW_RATE = 0.21;
+
+export function priceInclBtw(value: number | null | undefined): number | null {
+  if (value == null) return null;
+  return value * (1 + BTW_RATE);
 }
 
 export function formatDate(value: string | null | undefined): string {

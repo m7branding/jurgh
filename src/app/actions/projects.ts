@@ -48,12 +48,15 @@ export async function createProject(_prev: unknown, formData: FormData) {
   // nieuwe klant aanmaken indien geen bestaande gekozen
   if (!customerId) {
     if (!customerName) return { error: "Vul een klantnaam in of kies een bestaande klant." };
+    const isBusiness = formData.get("is_business") === "on";
     const { data, error } = await supabase
       .from("customers")
       .insert({
         name: customerName,
         email: customerEmail || null,
         profile_id: customerProfileId || null,
+        is_business: isBusiness,
+        company_name: isBusiness ? String(formData.get("company_name") || "").trim() || null : null,
       })
       .select("id")
       .single();
@@ -103,6 +106,8 @@ export async function createProject(_prev: unknown, formData: FormData) {
   const type = String(formData.get("type") || "detailing") as ProjectType;
   const price = formData.get("price") ? Number(formData.get("price")) : null;
   const discount = formData.get("discount") ? Number(formData.get("discount")) : 0;
+  const loanerCar = formData.get("loaner_car") === "on";
+  const transport = formData.get("transport") === "on";
 
   const { data: project, error } = await supabase
     .from("projects")
@@ -120,6 +125,11 @@ export async function createProject(_prev: unknown, formData: FormData) {
       start_date: String(formData.get("start_date") || "") || null,
       internal_notes: String(formData.get("internal_notes") || "") || null,
       customer_notes: String(formData.get("customer_notes") || "") || null,
+      loaner_car: loanerCar,
+      loaner_car_plate: loanerCar
+        ? String(formData.get("loaner_car_plate") || "").trim().toUpperCase() || null
+        : null,
+      transport,
       created_by: profile.id,
     })
     .select("id")
@@ -130,9 +140,9 @@ export async function createProject(_prev: unknown, formData: FormData) {
   redirect(`/admin/projecten/${project.id}`);
 }
 
-// ---------- Status bijwerken ----------
+// ---------- Status bijwerken (alleen admin) ----------
 export async function updateStatus(formData: FormData) {
-  await staff();
+  await adminOnly();
   const supabase = createClient();
   const projectId = String(formData.get("project_id"));
   const status = String(formData.get("status")) as ProjectStatus;
@@ -158,9 +168,31 @@ export async function updateStatus(formData: FormData) {
   refresh(projectId);
 }
 
-// ---------- Project afronden (markeren als compleet) ----------
+// ---------- Leenauto / transport aanpassen (admin, ook na aanmaken project) ----------
+export async function updateProjectExtras(formData: FormData) {
+  await adminOnly();
+  const supabase = createClient();
+  const projectId = String(formData.get("project_id"));
+  const loanerCar = formData.get("loaner_car") === "on";
+  const transport = formData.get("transport") === "on";
+
+  const { error } = await supabase
+    .from("projects")
+    .update({
+      loaner_car: loanerCar,
+      loaner_car_plate: loanerCar
+        ? String(formData.get("loaner_car_plate") || "").trim().toUpperCase() || null
+        : null,
+      transport,
+    })
+    .eq("id", projectId);
+  if (error) throw new Error(error.message);
+  refresh(projectId);
+}
+
+// ---------- Project afronden (markeren als compleet, alleen admin) ----------
 export async function completeProject(formData: FormData) {
-  await staff();
+  await adminOnly();
   const supabase = createClient();
   const projectId = String(formData.get("project_id"));
   const { error } = await supabase
@@ -211,9 +243,32 @@ export async function addWorkLog(_prev: unknown, formData: FormData) {
   return { ok: true };
 }
 
-// ---------- Meerwerk / minderwerk ----------
+// ---------- Urenregistratie bewerken (alleen eigen log, admin mag alles) ----------
+export async function updateWorkLog(_prev: unknown, formData: FormData) {
+  await staff();
+  const supabase = createClient();
+  const id = String(formData.get("work_log_id"));
+  const projectId = String(formData.get("project_id"));
+  const hours = Number(formData.get("hours"));
+  if (!hours || hours <= 0) return { error: "Vul een geldig aantal uren in." };
+
+  const { error } = await supabase
+    .from("work_logs")
+    .update({
+      log_date: String(formData.get("log_date") || new Date().toISOString().slice(0, 10)),
+      work_type: String(formData.get("work_type") || "overig") as WorkType,
+      hours,
+      description: String(formData.get("description") || "") || null,
+    })
+    .eq("id", id);
+  if (error) return { error: error.message };
+  refresh(projectId);
+  return { ok: true };
+}
+
+// ---------- Meerwerk / minderwerk (alleen admin) ----------
 export async function addExtraWork(_prev: unknown, formData: FormData) {
-  const profile = await staff();
+  const profile = await adminOnly();
   const supabase = createClient();
   const projectId = String(formData.get("project_id"));
   const title = String(formData.get("title") || "").trim();
@@ -225,12 +280,28 @@ export async function addExtraWork(_prev: unknown, formData: FormData) {
     description: String(formData.get("description") || "") || null,
     price: formData.get("price") ? Number(formData.get("price")) : 0,
     estimated_hours: formData.get("estimated_hours") ? Number(formData.get("estimated_hours")) : 0,
-    status: "voorgesteld",
+    pricing_mode: String(formData.get("pricing_mode") || "totaal"),
+    status: "concept",
     created_by: profile.id,
   });
   if (error) return { error: error.message };
   refresh(projectId);
   return { ok: true };
+}
+
+// Admin verstuurt een concept-meerwerkvoorstel naar de klant.
+export async function sendExtraWorkToCustomer(formData: FormData) {
+  await adminOnly();
+  const supabase = createClient();
+  const id = String(formData.get("extra_work_id"));
+  const projectId = String(formData.get("project_id"));
+  const { error } = await supabase
+    .from("extra_work")
+    .update({ status: "voorgesteld" })
+    .eq("id", id)
+    .eq("status", "concept");
+  if (error) throw new Error(error.message);
+  refresh(projectId);
 }
 
 // Klant accepteert of wijst af (via veilige RPC).
@@ -246,15 +317,42 @@ export async function respondExtraWork(formData: FormData) {
   refresh(projectId);
 }
 
-// Staff werkt de status bij (bv. markeren als uitgevoerd).
+// Admin werkt de status bij (bv. markeren als uitgevoerd).
 export async function setExtraWorkStatus(formData: FormData) {
-  await staff();
+  await adminOnly();
   const supabase = createClient();
   const id = String(formData.get("extra_work_id"));
   const projectId = String(formData.get("project_id"));
   const status = String(formData.get("status"));
   await supabase.from("extra_work").update({ status }).eq("id", id);
   refresh(projectId);
+}
+
+// ---------- Meerwerk-catalogus beheren (admin) ----------
+export async function addCatalogItem(_prev: unknown, formData: FormData) {
+  await adminOnly();
+  const supabase = createClient();
+  const title = String(formData.get("title") || "").trim();
+  if (!title) return { error: "Vul een titel in." };
+
+  const { error } = await supabase.from("extra_work_catalog").insert({
+    title,
+    description: String(formData.get("description") || "") || null,
+    price: formData.get("price") ? Number(formData.get("price")) : 0,
+    estimated_hours: formData.get("estimated_hours") ? Number(formData.get("estimated_hours")) : 0,
+    pricing_mode: String(formData.get("pricing_mode") || "totaal"),
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/admin/catalogus");
+  return { ok: true };
+}
+
+export async function deleteCatalogItem(formData: FormData) {
+  await adminOnly();
+  const supabase = createClient();
+  const id = String(formData.get("id"));
+  await supabase.from("extra_work_catalog").delete().eq("id", id);
+  revalidatePath("/admin/catalogus");
 }
 
 // ---------- Foto uploaden ----------
@@ -328,9 +426,37 @@ export async function uploadVehiclePhoto(_prev: unknown, formData: FormData) {
   return { ok: true };
 }
 
-// ---------- Document uploaden (offerte / factuur / certificaat) ----------
+// ---------- Herinneringen aan/uit per klant (admin) ----------
+export async function toggleCustomerReminders(formData: FormData) {
+  await adminOnly();
+  const supabase = createClient();
+  const customerId = String(formData.get("customer_id"));
+  const enabled = formData.get("enabled") === "true";
+  const { error } = await supabase
+    .from("customers")
+    .update({ reminders_enabled: enabled })
+    .eq("id", customerId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/klanten");
+}
+
+// ---------- Km-stand bijwerken (op autoniveau) ----------
+export async function updateVehicleMileage(formData: FormData) {
+  await staff();
+  const supabase = createClient();
+  const vehicleId = String(formData.get("vehicle_id"));
+  const mileage = formData.get("mileage") ? Number(formData.get("mileage")) : null;
+
+  const { error } = await supabase.from("vehicles").update({ mileage }).eq("id", vehicleId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/admin/autos/${vehicleId}`);
+  revalidatePath("/admin/autos");
+}
+
+// ---------- Document uploaden (offerte / factuur / certificaat, alleen admin) ----------
 export async function uploadDocument(_prev: unknown, formData: FormData) {
-  const profile = await staff();
+  const profile = await adminOnly();
   const supabase = createClient();
   const projectId = String(formData.get("project_id"));
   const file = formData.get("file") as File | null;
