@@ -27,15 +27,26 @@ alter table public.extra_work add constraint extra_work_pricing_mode_check
 
 -- ---------- extra_work: concept-status vóór 'voorgesteld' ----------
 -- (concept = nog niet verstuurd naar klant, alleen zichtbaar voor staff)
-alter type extra_work_status add value if not exists 'concept' before 'voorgesteld';
+-- Kolom omgezet van enum naar text + check-constraint: een nieuwe waarde
+-- toevoegen aan een bestaand enum-type (ALTER TYPE ... ADD VALUE) mag door
+-- Postgres niet in dezelfde transactie gebruikt worden, en de SQL Editor
+-- voert een volledige paste als één transactie uit — dat blokkeerde het
+-- gebruik van 'concept' verderop in dit script. Text + check heeft die
+-- beperking niet.
+-- De bestaande policy verwijst naar de status-kolom, dus die moet eerst weg
+-- voordat het kolomtype gewijzigd mag worden (Postgres staat dat niet toe
+-- op een kolom waar een policy nog van afhangt).
+drop policy if exists extra_work_read on public.extra_work;
 
--- Een nieuwe enum-waarde moet gecommit zijn voordat hij elders gebruikt mag
--- worden (Postgres-beperking). Deze COMMIT sluit het impliciete transactie-
--- blok van de SQL Editor af zodat 'concept' hieronder al bruikbaar is.
-commit;
+alter table public.extra_work alter column status drop default;
+alter table public.extra_work alter column status type text using status::text;
+alter table public.extra_work alter column status set default 'concept';
+
+alter table public.extra_work drop constraint if exists extra_work_status_check;
+alter table public.extra_work add constraint extra_work_status_check
+  check (status in ('concept', 'voorgesteld', 'intern_akkoord', 'klant_akkoord', 'uitgevoerd', 'afgewezen'));
 
 -- extra_work_read moet 'concept' ook afschermen voor de klant (naast intern_akkoord)
-drop policy if exists extra_work_read on public.extra_work;
 create policy extra_work_read on public.extra_work
   for select using (
     public.is_staff()
@@ -76,11 +87,13 @@ create policy extra_work_catalog_admin_write on public.extra_work_catalog
 
 -- projects: status/prijs/etc. alleen door admin te wijzigen
 drop policy if exists projects_staff_write on public.projects;
+drop policy if exists projects_admin_write on public.projects;
 create policy projects_admin_write on public.projects
   for all using (public.is_admin()) with check (public.is_admin());
 
 -- extra_work: alleen admin beheert meerwerk
 drop policy if exists extra_work_staff_write on public.extra_work;
+drop policy if exists extra_work_admin_write on public.extra_work;
 create policy extra_work_admin_write on public.extra_work
   for all using (public.is_admin()) with check (public.is_admin());
 
@@ -90,6 +103,7 @@ create policy documents_read on public.project_documents
   for select using (public.is_admin() or public.owns_project(project_id));
 
 drop policy if exists documents_staff_write on public.project_documents;
+drop policy if exists documents_admin_write on public.project_documents;
 create policy documents_admin_write on public.project_documents
   for all using (public.is_admin()) with check (public.is_admin());
 
