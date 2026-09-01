@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { listVehicles, vehicleTitle } from "@/lib/data";
-import { StatCard, SectionTitle, EmptyState, CarThumb } from "@/components/ui";
+import { StatCard, SectionTitle, EmptyState, CarThumb, Plate } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +49,7 @@ export default async function AdminAutosPage() {
                 <div className="space-y-2 p-4">
                   <h3 className="font-semibold text-jurgh-text">{vehicleTitle(v)}</h3>
                   <p className="text-sm text-jurgh-muted">
-                    <span className="font-mono uppercase">{v.license_plate}</span>
+                    <Plate value={v.license_plate} />
                     {v.customers ? ` · ${v.customers.name}` : ""}
                   </p>
                   <p className="text-xs text-jurgh-muted">

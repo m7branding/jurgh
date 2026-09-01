@@ -82,10 +82,10 @@ export async function listAllWorkLogs() {
   const { data } = await supabase
     .from("work_logs")
     .select(
-      "*, profiles:employee_id(full_name), projects:project_id(title, vehicles:vehicle_id(license_plate, make, model), customers:customer_id(name))"
+      "*, profiles:employee_id(full_name), projects:project_id(id, title, vehicles:vehicle_id(license_plate, make, model), customers:customer_id(name))"
     )
     .order("log_date", { ascending: false })
-    .limit(500);
+    .limit(2000);
   return data ?? [];
 }
 

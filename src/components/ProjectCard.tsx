@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CarThumb, StatusBadge, Badge } from "@/components/ui";
+import { CarThumb, StatusBadge, Badge, Plate } from "@/components/ui";
 import { vehicleTitle, type Project } from "@/lib/types";
-import { PROJECT_TYPE_LABEL, formatDate, type ProjectType, type ProjectStatus } from "@/lib/constants";
+import { projectTypeLabel, formatDate, type ProjectStatus } from "@/lib/constants";
 import { WorkLogForm, ExtraWorkForm } from "@/components/forms/StaffForms";
 
 type QuickAction = "log" | "meerwerk" | null;
@@ -39,12 +39,12 @@ export function ProjectCard({
         <div className="space-y-3 p-4">
           <div className="flex items-center justify-between gap-2">
             <StatusBadge status={project.status as ProjectStatus} />
-            <Badge tone="neutral">{PROJECT_TYPE_LABEL[project.type as ProjectType]}</Badge>
+            <Badge tone="neutral">{projectTypeLabel(project.type)}</Badge>
           </div>
           <div className="min-w-0">
             <h3 className="font-semibold text-jurgh-text">{vehicleTitle(v)}</h3>
             <p className="truncate text-sm text-jurgh-muted">
-              <span className="font-mono uppercase">{v?.license_plate}</span>
+              <Plate value={v?.license_plate} />
               {project.customers ? ` · ${project.customers.name}` : ""}
             </p>
           </div>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireProfile, homePathForRole } from "@/lib/auth";
 import { getVehiclePassport, vehicleTitle } from "@/lib/data";
-import { PROJECT_TYPE_LABEL, formatDate, type ProjectType } from "@/lib/constants";
+import { projectTypeLabel, formatDate } from "@/lib/constants";
 import { PrintButton } from "@/components/PrintButton";
 
 export const dynamic = "force-dynamic";
@@ -59,7 +59,11 @@ export default async function PassportPage({ params }: { params: { vehicleId: st
           <section>
             <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-400">Voertuig</h2>
             <p className="text-lg font-bold text-[#111]">{vehicleTitle(vehicle)}</p>
-            <p className="font-mono text-sm uppercase text-gray-600">{vehicle.license_plate}</p>
+            {vehicle.license_plate ? (
+              <p className="font-mono text-sm uppercase text-gray-600">{vehicle.license_plate}</p>
+            ) : (
+              <p className="text-sm italic text-gray-500">Kenteken onbekend</p>
+            )}
             <dl className="mt-2 space-y-0.5 text-sm text-gray-600">
               {vehicle.year && <div>Bouwjaar: {vehicle.year}</div>}
               {vehicle.color && <div>Kleur: {vehicle.color}</div>}
@@ -101,7 +105,7 @@ export default async function PassportPage({ params }: { params: { vehicleId: st
                     </td>
                     <td className="py-2.5 pr-3 align-top font-medium text-[#111]">{p.title}</td>
                     <td className="py-2.5 align-top text-gray-600">
-                      {PROJECT_TYPE_LABEL[p.type as ProjectType]}
+                      {projectTypeLabel(p.type)}
                     </td>
                   </tr>
                 ))}

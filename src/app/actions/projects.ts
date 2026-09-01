@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
+import { normalizePlate } from "@/lib/types";
 import type {
   ProjectStatus,
   PhotoLabel,
@@ -67,15 +68,23 @@ export async function createProject(_prev: unknown, formData: FormData) {
   // auto
   let vehicleId = String(formData.get("vehicle_id") || "").trim();
   if (!vehicleId) {
-    const plate = String(formData.get("license_plate") || "").trim();
-    if (!plate) return { error: "Vul een kenteken in." };
+    // Kenteken mag leeg blijven (migratie 0007): niet elke auto heeft er al een
+    // bij het aanmaken. Dan is minimaal merk of model nodig om de auto te herkennen.
+    const plate = normalizePlate(String(formData.get("license_plate") || ""));
+    const make = String(formData.get("make") || "").trim();
+    const model = String(formData.get("model") || "").trim();
+    if (!plate && !make && !model) {
+      return {
+        error: "Vul een kenteken in, of merk en model als het kenteken nog onbekend is.",
+      };
+    }
     const { data, error } = await supabase
       .from("vehicles")
       .insert({
         customer_id: customerId,
-        license_plate: plate.toUpperCase(),
-        make: String(formData.get("make") || "") || null,
-        model: String(formData.get("model") || "") || null,
+        license_plate: plate || null,
+        make: make || null,
+        model: model || null,
         year: Number(formData.get("year")) || null,
         color: String(formData.get("color") || "") || null,
         mileage: Number(formData.get("mileage")) || null,
@@ -440,18 +449,30 @@ export async function toggleCustomerReminders(formData: FormData) {
   revalidatePath("/admin/klanten");
 }
 
-// ---------- Km-stand bijwerken (op autoniveau) ----------
-export async function updateVehicleMileage(formData: FormData) {
+// ---------- Autogegevens bijwerken: km-stand + kenteken ----------
+// Het kenteken mag bij het aanmaken leeg blijven; hier vul je het later aan.
+export async function updateVehicleDetails(formData: FormData) {
   await staff();
   const supabase = createClient();
   const vehicleId = String(formData.get("vehicle_id"));
-  const mileage = formData.get("mileage") ? Number(formData.get("mileage")) : null;
 
-  const { error } = await supabase.from("vehicles").update({ mileage }).eq("id", vehicleId);
+  const patch: Record<string, unknown> = {
+    mileage: formData.get("mileage") ? Number(formData.get("mileage")) : null,
+  };
+
+  // Alleen bijwerken als het veld daadwerkelijk is meegestuurd, zodat een
+  // formulier zonder kentekenveld het bestaande kenteken niet wist.
+  if (formData.has("license_plate")) {
+    patch.license_plate = normalizePlate(String(formData.get("license_plate") || "")) || null;
+  }
+
+  const { error } = await supabase.from("vehicles").update(patch).eq("id", vehicleId);
   if (error) throw new Error(error.message);
 
   revalidatePath(`/admin/autos/${vehicleId}`);
   revalidatePath("/admin/autos");
+  revalidatePath("/admin/projecten");
+  revalidatePath("/admin");
 }
 
 // ---------- Document uploaden (offerte / factuur / certificaat, alleen admin) ----------

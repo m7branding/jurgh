@@ -17,7 +17,7 @@ import {
   uploadVehiclePhoto,
   togglePhotoVisibility,
   updateProjectExtras,
-  updateVehicleMileage,
+  updateVehicleDetails,
   addCatalogItem,
   deleteCatalogItem,
 } from "@/app/actions/projects";
@@ -679,10 +679,27 @@ export function VehiclePhotoForm({
 }
 
 // ---------- Km-stand bijwerken (op autoniveau) ----------
-export function MileageForm({ vehicleId, mileage }: { vehicleId: string; mileage: number | null }) {
+export function VehicleDetailsForm({
+  vehicleId,
+  mileage,
+  licensePlate,
+}: {
+  vehicleId: string;
+  mileage: number | null;
+  licensePlate: string | null;
+}) {
   return (
-    <form action={updateVehicleMileage} className="flex flex-wrap items-end gap-2">
+    <form action={updateVehicleDetails} className="flex flex-wrap items-end gap-2">
       <input type="hidden" name="vehicle_id" value={vehicleId} />
+      <div>
+        <label className="label">Kenteken</label>
+        <input
+          name="license_plate"
+          defaultValue={licensePlate ?? ""}
+          className="input max-w-[160px] uppercase"
+          placeholder="XX-001-X"
+        />
+      </div>
       <div>
         <label className="label">Km-stand</label>
         <input

@@ -42,7 +42,8 @@ drie testaccounts mét demo-dossier. Je mag het veilig opnieuw draaien.
 
 > Wil je het stap voor stap? Draai dan in plaats daarvan de losse bestanden in
 > volgorde: `migrations/0001_init.sql` → `0002_rls.sql` → `0003_storage.sql` →
-> `seed.sql`.
+> `0004_vehicle_photos.sql` → `0005_extra_work.sql` → `0006_workflow_extensions.sql`
+> → `0007_project_types_plate.sql` → `seed.sql`.
 
 Testaccounts (wachtwoord voor alle: `JurghTest123!`):
 
@@ -59,6 +60,21 @@ Daarnaast staan er drie M7 Branding-testaccounts klaar (wachtwoord voor alle: `1
 | `alexander@m7branding.com` | Admin |
 | `alexander_koselka@hotmail.com` | Klant |
 | `test@detailing.nl` | Medewerker |
+
+En de medewerkers van JURGH (wachtwoord voor alle: `JurghTest123!`):
+
+| E-mail | Naam |
+| --- | --- |
+| `duncan@detailing.nl` | Duncan |
+| `tijmen@detailing.nl` | Tijmen |
+| `hidde@detailing.nl` | Hidde |
+| `sem@detailing.nl` | Sem |
+| `inta@detailing.nl` | Inta |
+| `bram@detailing.nl` | Bram |
+
+> Het adres is het inlogaccount; er hoeft geen postvak achter te zitten zolang jij
+> het wachtwoord instelt. Zonder werkende mailbox kan iemand wél nooit zelf zijn
+> wachtwoord herstellen.
 
 ### 2. App online zetten via Netlify
 1. Koppel deze GitHub-repo in Netlify ("Import from Git"). Netlify draait zelf

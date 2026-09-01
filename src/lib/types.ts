@@ -2,7 +2,7 @@
 
 export type Vehicle = {
   id: string;
-  license_plate: string;
+  license_plate: string | null;
   make: string | null;
   model: string | null;
   year: number | null;
@@ -50,5 +50,17 @@ export type Project = {
 export function vehicleTitle(v?: Vehicle | null): string {
   if (!v) return "Onbekende auto";
   const parts = [v.make, v.model].filter(Boolean).join(" ");
-  return parts || v.license_plate;
+  return parts || v.license_plate || "Auto zonder kenteken";
+}
+
+/** Kenteken netjes weergeven; leeg kenteken mag sinds migratie 0007. */
+export function hasPlate(plate?: string | null): boolean {
+  return Boolean(plate && plate.trim());
+}
+
+export const NO_PLATE_LABEL = "Kenteken onbekend";
+
+/** Kenteken uniform maken: hoofdletters, zonder streepjes of spaties. */
+export function normalizePlate(plate: string): string {
+  return plate.toUpperCase().replace(/[^A-Z0-9]/g, "");
 }

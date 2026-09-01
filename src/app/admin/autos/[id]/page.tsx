@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { getVehicleWithProjects, vehicleTitle } from "@/lib/data";
-import { CarThumb, BackLink, SectionTitle, EmptyState } from "@/components/ui";
+import { CarThumb, BackLink, SectionTitle, EmptyState, Plate } from "@/components/ui";
 import { ProjectCard } from "@/components/ProjectCard";
-import { MileageForm } from "@/components/forms/StaffForms";
+import { VehicleDetailsForm } from "@/components/forms/StaffForms";
 
 export const dynamic = "force-dynamic";
 
@@ -28,9 +28,7 @@ export default async function AdminVehicleDetailPage({ params }: { params: { id:
             <div>
               <h1 className="text-2xl font-bold text-jurgh-text">{vehicleTitle(vehicle)}</h1>
               <p className="mt-1 text-jurgh-muted">
-                <span className="font-mono uppercase tracking-wide text-jurgh-text">
-                  {vehicle.license_plate}
-                </span>
+                <Plate value={vehicle.license_plate} className="text-jurgh-text" />
                 {vehicle.customers ? ` · ${vehicle.customers.name}` : ""}
               </p>
             </div>
@@ -40,9 +38,11 @@ export default async function AdminVehicleDetailPage({ params }: { params: { id:
               {vehicle.color && <Field label="Kleur" value={vehicle.color} />}
             </dl>
 
-            <div className="max-w-xs">
-              <MileageForm vehicleId={vehicle.id} mileage={vehicle.mileage} />
-            </div>
+            <VehicleDetailsForm
+              vehicleId={vehicle.id}
+              mileage={vehicle.mileage}
+              licensePlate={vehicle.license_plate}
+            />
 
             <Link href={`/passport/${vehicle.id}`} target="_blank" className="btn-ghost inline-flex">
               🛡️ Detailing Passport

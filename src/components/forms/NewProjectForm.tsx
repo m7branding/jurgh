@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { createProject } from "@/app/actions/projects";
+import { lookupLicensePlate } from "@/app/actions/rdw";
 import { PROJECT_TYPES, PROJECT_STATUSES, type ProjectStatus } from "@/lib/constants";
 import { StatusBadge } from "@/components/ui";
 
@@ -29,6 +30,47 @@ export function NewProjectForm({ customers }: { customers: CustomerOption[] }) {
   const [status, setStatus] = useState<ProjectStatus>("concept");
   const [isBusiness, setIsBusiness] = useState(false);
   const [loanerCar, setLoanerCar] = useState(false);
+
+  // ---- auto + kentekencheck (RDW) ----
+  const [plate, setPlate] = useState("");
+  const [plateUnknown, setPlateUnknown] = useState(false);
+  const [make, setMake] = useState("");
+  const [model, setModel] = useState("");
+  const [year, setYear] = useState("");
+  const [color, setColor] = useState("");
+  const [rdw, setRdw] = useState<{ tone: "ok" | "error"; message: string } | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [checkedPlate, setCheckedPlate] = useState("");
+
+  async function runPlateCheck() {
+    const clean = plate.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (clean.length < 6) {
+      setRdw({ tone: "error", message: "Vul een volledig kenteken in." });
+      return;
+    }
+    setCheckedPlate(clean);
+    setChecking(true);
+    try {
+      const result = await lookupLicensePlate(clean);
+      if (!result.ok) {
+        setRdw({ tone: "error", message: result.error });
+        return;
+      }
+      // gevonden waarden invullen; wat de RDW niet weet, blijft staan
+      if (result.make) setMake(result.make);
+      if (result.model) setModel(result.model);
+      if (result.year) setYear(String(result.year));
+      if (result.color) setColor(result.color);
+      setRdw({
+        tone: "ok",
+        message: `Gevonden bij de RDW: ${
+          [result.make, result.model].filter(Boolean).join(" ") || "voertuig"
+        }. Aanpassen mag.`,
+      });
+    } finally {
+      setChecking(false);
+    }
+  }
 
   const selectedCustomer = customers.find((c) => c.id === customerId);
   const newCustomer = customerId === "";
@@ -116,25 +158,108 @@ export function NewProjectForm({ customers }: { customers: CustomerOption[] }) {
 
         {!vehicleId && (
           <div className="grid gap-4 sm:grid-cols-3">
+            {!plateUnknown && (
+              <div className="sm:col-span-3">
+                <label className="label">Kenteken</label>
+                <div className="flex flex-wrap gap-2">
+                  <input
+                    name="license_plate"
+                    className="input uppercase sm:max-w-[220px]"
+                    placeholder="XX-001-X"
+                    value={plate}
+                    onChange={(e) => {
+                      setPlate(e.target.value);
+                      setRdw(null);
+                    }}
+                    onBlur={() => {
+                      const clean = plate.toUpperCase().replace(/[^A-Z0-9]/g, "");
+                      if (clean.length >= 6 && clean !== checkedPlate) void runPlateCheck();
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    onClick={() => void runPlateCheck()}
+                    disabled={checking}
+                  >
+                    {checking ? "Ophalen…" : "Gegevens ophalen"}
+                  </button>
+                </div>
+                {rdw && (
+                  <p
+                    className={`mt-1.5 text-xs ${
+                      rdw.tone === "ok" ? "text-jurgh-green" : "text-jurgh-red"
+                    }`}
+                  >
+                    {rdw.message}
+                  </p>
+                )}
+                {!rdw && (
+                  <p className="mt-1.5 text-xs text-jurgh-muted">
+                    Merk, model, bouwjaar en kleur worden automatisch opgehaald bij de RDW.
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="sm:col-span-3">
+              <label className="flex items-center gap-2 text-sm text-jurgh-muted">
+                <input
+                  type="checkbox"
+                  checked={plateUnknown}
+                  onChange={(e) => {
+                    setPlateUnknown(e.target.checked);
+                    if (e.target.checked) {
+                      setPlate("");
+                      setRdw(null);
+                    }
+                  }}
+                  className="accent-jurgh-red"
+                />
+                Kenteken nog onbekend — vul dan minimaal merk en model in
+              </label>
+            </div>
+
             <div>
-              <label className="label">Kenteken *</label>
-              <input name="license_plate" className="input uppercase" placeholder="XX-001-X" />
+              <label className="label">Merk{plateUnknown ? " *" : ""}</label>
+              <input
+                name="make"
+                className="input"
+                placeholder="Porsche"
+                value={make}
+                onChange={(e) => setMake(e.target.value)}
+              />
             </div>
             <div>
-              <label className="label">Merk</label>
-              <input name="make" className="input" placeholder="Porsche" />
-            </div>
-            <div>
-              <label className="label">Model</label>
-              <input name="model" className="input" placeholder="911 Carrera" />
+              <label className="label">Model{plateUnknown ? " *" : ""}</label>
+              <input
+                name="model"
+                className="input"
+                placeholder="911 Carrera"
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+              />
             </div>
             <div>
               <label className="label">Bouwjaar</label>
-              <input name="year" type="number" className="input" placeholder="2023" />
+              <input
+                name="year"
+                type="number"
+                className="input"
+                placeholder="2023"
+                value={year}
+                onChange={(e) => setYear(e.target.value)}
+              />
             </div>
             <div>
               <label className="label">Kleur</label>
-              <input name="color" className="input" placeholder="GT Silver" />
+              <input
+                name="color"
+                className="input"
+                placeholder="GT Silver"
+                value={color}
+                onChange={(e) => setColor(e.target.value)}
+              />
             </div>
             <div>
               <label className="label">Km-stand</label>

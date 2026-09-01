@@ -16,6 +16,10 @@
 --   alexander@m7branding.com       → admin
 --   alexander_koselka@hotmail.com  → klant
 --   test@detailing.nl              → medewerker
+--
+-- Medewerkers van JURGH (wachtwoord: JurghTest123!):
+--   duncan@detailing.nl, tijmen@detailing.nl, hidde@detailing.nl,
+--   sem@detailing.nl, inta@detailing.nl, bram@detailing.nl
 -- ============================================================
 
 -- ---------- 1. Testgebruikers in auth schema ----------
@@ -33,7 +37,18 @@ begin
       ('klant@jurgh.test',              'klant',      'Jan de Vries',      'JurghTest123!'),
       ('alexander@m7branding.com',      'admin',      'Alexander',         '123123123'),
       ('alexander_koselka@hotmail.com', 'klant',      'Alexander Koselka', '123123123'),
-      ('test@detailing.nl',             'medewerker', 'Medewerker',        '123123123')
+      ('test@detailing.nl',             'medewerker', 'Medewerker',        '123123123'),
+      ('duncan@detailing.nl',           'medewerker', 'Duncan',            'JurghTest123!'),
+      ('tijmen@detailing.nl',           'medewerker', 'Tijmen',            'JurghTest123!'),
+      ('hidde@detailing.nl',            'medewerker', 'Hidde',             'JurghTest123!'),
+      ('sem@detailing.nl',              'medewerker', 'Sem',               'JurghTest123!'),
+      ('inta@detailing.nl',             'medewerker', 'Inta',              'JurghTest123!'),
+      ('bram@detailing.nl',             'medewerker', 'Bram',              'JurghTest123!'),
+      ('tijmen@detailing.nl',                  'medewerker', 'Tijmen',            'JurghTest123!'),
+      ('hidde@detailing.nl',                   'medewerker', 'Hidde',             'JurghTest123!'),
+      ('sem@detailing.nl',                     'medewerker', 'Sem',               'JurghTest123!'),
+      ('inta@detailing.nl',                    'medewerker', 'Inta',              'JurghTest123!'),
+      ('bram@detailing.nl',                    'medewerker', 'Bram',              'JurghTest123!')
     ) as t(email, role, full_name, password)
   loop
     select id into uid from auth.users where email = rec.email;

@@ -6,6 +6,7 @@ import {
   STATUS_MAX_ORDER,
   type ProjectStatus,
 } from "@/lib/constants";
+import { hasPlate, NO_PLATE_LABEL } from "@/lib/types";
 
 // ---------- Logo + "Detailing Portal" lockup ----------
 export function Logo({
@@ -54,6 +55,24 @@ export function Badge({
       {children}
     </span>
   );
+}
+
+// ---------- Kenteken ----------
+// Sinds migratie 0007 mag een auto (nog) geen kenteken hebben; dat moet zichtbaar
+// zijn zonder dat de layout verspringt.
+export function Plate({
+  value,
+  className = "",
+}: {
+  value?: string | null;
+  className?: string;
+}) {
+  // De terugval houdt bewust zijn eigen (gedempte) kleur, los van de className
+  // die de aanroeper voor een écht kenteken meegeeft.
+  if (!hasPlate(value)) {
+    return <span className="italic text-jurgh-muted">{NO_PLATE_LABEL}</span>;
+  }
+  return <span className={`font-mono uppercase tracking-wide ${className}`}>{value}</span>;
 }
 
 function hexToRgb(hex: string) {

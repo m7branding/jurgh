@@ -12,7 +12,7 @@ import {
 } from "@/lib/data";
 import { getSessionProfile } from "@/lib/auth";
 import {
-  PROJECT_TYPE_LABEL,
+  projectTypeLabel,
   STATUS_LABEL,
   PHOTO_LABEL,
   DOCUMENT_TYPE_LABEL,
@@ -23,7 +23,6 @@ import {
   priceInclBtw,
   formatDate,
   formatDateTime,
-  type ProjectType,
   type ProjectStatus,
   type PhotoLabel,
   type DocumentType,
@@ -39,6 +38,7 @@ import {
   SectionTitle,
   EmptyState,
   Collapsible,
+  Plate,
 } from "@/components/ui";
 import {
   StatusForm,
@@ -157,7 +157,7 @@ export async function ProjectDetail({
           <div className="p-6">
             <div className="flex flex-wrap items-center gap-2">
               <StatusBadge status={project.status as ProjectStatus} />
-              <Badge tone="neutral">{PROJECT_TYPE_LABEL[project.type as ProjectType]}</Badge>
+              <Badge tone="neutral">{projectTypeLabel(project.type)}</Badge>
               {project.completed_at && (
                 <Badge tone="green">
                   <Check className="h-3 w-3" /> Compleet
@@ -172,10 +172,7 @@ export async function ProjectDetail({
             </div>
             <h1 className="mt-3 text-2xl font-bold text-jurgh-text">{project.title}</h1>
             <p className="mt-1 text-jurgh-muted">
-              {vehicleTitle(v)} ·{" "}
-              <span className="font-mono uppercase tracking-wide text-jurgh-text">
-                {v?.license_plate}
-              </span>
+              {vehicleTitle(v)} · <Plate value={v?.license_plate} className="text-jurgh-text" />
             </p>
 
             <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">

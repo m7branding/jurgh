@@ -2,7 +2,14 @@
 
 export type Role = "admin" | "medewerker" | "klant";
 
-export type ProjectType = "glascoating" | "ppf" | "detailing" | "upgrade";
+export type ProjectType =
+  | "glascoating"
+  | "ppf"
+  | "detailing"
+  | "upgrade"
+  | "wrap"
+  | "schadeherstel"
+  | "overig";
 
 export type ProjectStatus =
   | "concept"
@@ -46,6 +53,9 @@ export const PROJECT_TYPES: { value: ProjectType; label: string }[] = [
   { value: "ppf", label: "Paint Protection Film" },
   { value: "detailing", label: "Detailing Services" },
   { value: "upgrade", label: "Upgrade Your Car" },
+  { value: "wrap", label: "Wrap" },
+  { value: "schadeherstel", label: "Schadeherstel" },
+  { value: "overig", label: "Overig project" },
 ];
 
 export const PROJECT_TYPE_LABEL: Record<ProjectType, string> = {
@@ -53,7 +63,16 @@ export const PROJECT_TYPE_LABEL: Record<ProjectType, string> = {
   ppf: "Paint Protection Film",
   detailing: "Detailing Services",
   upgrade: "Upgrade Your Car",
+  wrap: "Wrap",
+  schadeherstel: "Schadeherstel",
+  overig: "Overig project",
 };
+
+// Label van een projecttype, met terugval voor waarden die (nog) niet in de
+// lijst staan — de kolom is tekst, dus een onbekende waarde mag de UI niet slopen.
+export function projectTypeLabel(type: string): string {
+  return PROJECT_TYPE_LABEL[type as ProjectType] ?? "Overig project";
+}
 
 // Geordende statusflow (sectie 9). 'order' bepaalt de progress bar.
 export const PROJECT_STATUSES: {

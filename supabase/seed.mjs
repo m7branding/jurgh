@@ -1,6 +1,7 @@
 // ============================================================
 // JURGH portaal — seed script
-// Maakt 3 testaccounts (admin, medewerker, klant) + een demo dossier.
+// Maakt de testaccounts (admin, medewerker, klant), de JURGH-medewerkers
+// en een demo dossier.
 //
 // Gebruik:
 //   1. Run eerst de SQL migraties in supabase/migrations (in volgorde).
@@ -35,6 +36,9 @@ const admin = createClient(url, serviceKey, {
 
 const PASSWORD = "JurghTest123!";
 const M7_PASSWORD = "123123123";
+
+// Medewerkers van JURGH: voornaam@detailing.nl, wachtwoord PASSWORD
+const JURGH_MEDEWERKERS = ["Duncan", "Tijmen", "Hidde", "Sem", "Inta", "Bram"];
 
 async function ensureUser(email, role, fullName, password = PASSWORD) {
   // bestaat de user al?
@@ -145,6 +149,11 @@ async function main() {
   await ensureUser("alexander_koselka@hotmail.com", "klant", "Alexander Koselka", M7_PASSWORD);
   await ensureUser("test@detailing.nl", "medewerker", "Medewerker", M7_PASSWORD);
 
+  // ---------- Medewerkers van JURGH ----------
+  for (const name of JURGH_MEDEWERKERS) {
+    await ensureUser(`${name.toLowerCase()}@detailing.nl`, "medewerker", name);
+  }
+
   console.log("\nKlaar. Testaccounts (wachtwoord voor alle: " + PASSWORD + "):");
   console.log("  admin@jurgh.test       → admin");
   console.log("  medewerker@jurgh.test  → medewerker");
@@ -153,6 +162,10 @@ async function main() {
   console.log("  alexander@m7branding.com       → admin");
   console.log("  alexander_koselka@hotmail.com  → klant");
   console.log("  test@detailing.nl              → medewerker");
+  console.log("\nMedewerkers (wachtwoord voor alle: " + PASSWORD + "):");
+  for (const name of JURGH_MEDEWERKERS) {
+    console.log(`  ${name.toLowerCase()}@detailing.nl → medewerker (${name})`);
+  }
 }
 
 main().catch((e) => {

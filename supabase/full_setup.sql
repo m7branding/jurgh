@@ -2,7 +2,8 @@
 -- JURGH portaal — VOLLEDIGE SETUP IN ÉÉN BESTAND
 -- Plak dit complete bestand in Supabase → SQL Editor → Run.
 -- Bevat: schema (0001) + RLS (0002) + storage (0003) + auto-foto's (0004)
---        + meerwerk (0005) + workflow-uitbreidingen (0006) + seed.
+--        + meerwerk (0005) + workflow-uitbreidingen (0006)
+--        + projecttypes & kenteken (0007) + seed.
 --        Veilig opnieuw te draaien (idempotent).
 -- ============================================================
 
@@ -671,6 +672,37 @@ create policy worklogs_delete on public.work_logs
   for delete using (public.is_admin());
 
 -- ============================================================
+-- Migration 0007: projecttypes + kenteken
+-- - projects.type: enum -> text + check, met de nieuwe types
+--   wrap, schadeherstel en overig
+-- - vehicles.license_plate: mag leeg blijven (kenteken is bij het
+--   aanmaken van een project niet altijd bekend)
+-- ============================================================
+
+-- ---------- projects.type: enum -> text ----------
+-- Waarom geen 'alter type project_type add value': Postgres staat het gebruik
+-- van een net toegevoegde enum-waarde niet toe in dezelfde transactie, en de
+-- Supabase SQL Editor voert een volledige paste als één transactie uit. Text +
+-- check-constraint heeft die beperking niet en maakt een volgend projecttype
+-- een kwestie van één waarde toevoegen.
+alter table public.projects alter column type drop default;
+alter table public.projects alter column type type text using type::text;
+alter table public.projects alter column type set default 'detailing';
+
+alter table public.projects drop constraint if exists projects_type_check;
+alter table public.projects add constraint projects_type_check
+  check (type in (
+    'glascoating', 'ppf', 'detailing', 'upgrade',
+    'wrap', 'schadeherstel', 'overig'
+  ));
+
+-- ---------- vehicles.license_plate: niet meer verplicht ----------
+-- Lege strings die eerder als "onbekend" zijn ingevoerd worden null, zodat de
+-- app maar één lege waarde hoeft te herkennen.
+alter table public.vehicles alter column license_plate drop not null;
+update public.vehicles set license_plate = null where btrim(license_plate) = '';
+
+-- ============================================================
 -- JURGH portaal — SEED (browser-only, geen lokale tooling nodig)
 --
 -- Draai DIT pas NA de migraties 0001 → 0002 → 0003.
@@ -688,6 +720,10 @@ create policy worklogs_delete on public.work_logs
 --   alexander@m7branding.com       → admin
 --   alexander_koselka@hotmail.com  → klant
 --   test@detailing.nl              → medewerker
+--
+-- Medewerkers van JURGH (wachtwoord: JurghTest123!):
+--   duncan@detailing.nl, tijmen@detailing.nl, hidde@detailing.nl,
+--   sem@detailing.nl, inta@detailing.nl, bram@detailing.nl
 -- ============================================================
 
 -- ---------- 1. Testgebruikers in auth schema ----------
@@ -705,7 +741,18 @@ begin
       ('klant@jurgh.test',              'klant',      'Jan de Vries',      'JurghTest123!'),
       ('alexander@m7branding.com',      'admin',      'Alexander',         '123123123'),
       ('alexander_koselka@hotmail.com', 'klant',      'Alexander Koselka', '123123123'),
-      ('test@detailing.nl',             'medewerker', 'Medewerker',        '123123123')
+      ('test@detailing.nl',             'medewerker', 'Medewerker',        '123123123'),
+      ('duncan@detailing.nl',           'medewerker', 'Duncan',            'JurghTest123!'),
+      ('tijmen@detailing.nl',           'medewerker', 'Tijmen',            'JurghTest123!'),
+      ('hidde@detailing.nl',            'medewerker', 'Hidde',             'JurghTest123!'),
+      ('sem@detailing.nl',              'medewerker', 'Sem',               'JurghTest123!'),
+      ('inta@detailing.nl',             'medewerker', 'Inta',              'JurghTest123!'),
+      ('bram@detailing.nl',             'medewerker', 'Bram',              'JurghTest123!'),
+      ('tijmen@detailing.nl',                  'medewerker', 'Tijmen',            'JurghTest123!'),
+      ('hidde@detailing.nl',                   'medewerker', 'Hidde',             'JurghTest123!'),
+      ('sem@detailing.nl',                     'medewerker', 'Sem',               'JurghTest123!'),
+      ('inta@detailing.nl',                    'medewerker', 'Inta',              'JurghTest123!'),
+      ('bram@detailing.nl',                    'medewerker', 'Bram',              'JurghTest123!')
     ) as t(email, role, full_name, password)
   loop
     select id into uid from auth.users where email = rec.email;

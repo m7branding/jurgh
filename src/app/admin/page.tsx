@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { listProjects } from "@/lib/data";
-import { ProjectCard } from "@/components/ProjectCard";
+import { ProjectBrowser } from "@/components/ProjectBrowser";
 import { StatCard, SectionTitle, EmptyState } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -32,20 +32,23 @@ export default async function AdminDashboard() {
 
       <section>
         <SectionTitle action={<Link href="/admin/projecten" className="text-sm text-jurgh-red hover:underline">Alle projecten →</Link>}>
-          Lopende projecten
+          Zoeken &amp; lopende projecten
         </SectionTitle>
-        {active.length === 0 ? (
+        {projects.length === 0 ? (
           <EmptyState
-            title="Nog geen lopende projecten"
+            title="Nog geen projecten"
             description="Maak je eerste project aan om te starten."
             action={<Link href="/admin/projecten/nieuw" className="btn-primary">+ Nieuw project</Link>}
           />
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {active.map((p) => (
-              <ProjectCard key={p.id} project={p} href={`/admin/projecten/${p.id}`} cta="Open project" mode="admin" />
-            ))}
-          </div>
+          /* zoekt in álle projecten, toont standaard alleen de lopende */
+          <ProjectBrowser
+            projects={projects}
+            hrefBase="/admin/projecten"
+            cta="Open project"
+            mode="admin"
+            defaultScope="lopend"
+          />
         )}
       </section>
     </div>
