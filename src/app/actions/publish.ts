@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionProfile } from "@/lib/auth";
 import { isMailDryRun, emailProblem } from "@/lib/publish-rules";
@@ -40,6 +41,41 @@ async function findUserByEmail(
     if (data.users.length < 200) return null;
   }
   return null;
+}
+
+/**
+ * Basis-URL van het portaal, uit het binnenkomende verzoek. Zo hoeft er geen
+ * extra omgevingsvariabele bij en klopt hij ook op een preview-deploy.
+ */
+function appUrl(): string {
+  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL;
+  if (fromEnv) return fromEnv.replace(/\/+$/, "");
+  const h = headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
+  const proto = h.get("x-forwarded-proto") ?? "https";
+  return `${proto}://${host}`;
+}
+
+/**
+ * Inloglink op onze eigen /auth/confirm, niet de standaardlink van Supabase.
+ * Die laatste levert de tokens af achter een #, en dat fragment bereikt de
+ * server nooit — dan blijft de serversessie leeg. Met het token_hash kan
+ * /auth/confirm de sessie wél server-side zetten.
+ *
+ * hashed_token staat in de response; staat hij er onverhoopt niet, dan zit
+ * hetzelfde token als ?token= in de action_link.
+ */
+function buildLoginLink(properties: any): string | null {
+  let hashed: string | null = properties?.hashed_token ?? null;
+  if (!hashed && properties?.action_link) {
+    try {
+      hashed = new URL(properties.action_link).searchParams.get("token");
+    } catch {
+      hashed = null;
+    }
+  }
+  if (!hashed) return null;
+  return `${appUrl()}/auth/confirm?token_hash=${encodeURIComponent(hashed)}&type=magiclink`;
 }
 
 export type PublishResult = { error?: string; ok?: boolean; dryRun?: boolean };
@@ -115,7 +151,8 @@ export async function publishProject(_prev: unknown, formData: FormData): Promis
       email,
     });
     if (error) return { error: `Kon inloglink niet maken: ${error.message}` };
-    actionLink = data.properties?.action_link ?? null;
+    actionLink = buildLoginLink(data.properties);
+    if (!actionLink) return { error: "Supabase gaf geen bruikbaar token terug." };
     melding = `Uitnodiging voor ${customer.name} — project "${project.title}".`;
   } else {
     melding = `Melding voor ${customer.name}: project "${project.title}" staat klaar in het dossier.`;
@@ -156,6 +193,55 @@ export async function publishProject(_prev: unknown, formData: FormData): Promis
 
   refresh(project.id);
   return { ok: true, dryRun: true };
+}
+
+/**
+ * Verse inloglink voor een klant. Een link is eenmalig en verloopt (standaard
+ * na een uur), dus in de testfase moet je er een nieuwe kunnen maken zonder
+ * het project opnieuw te publiceren.
+ */
+export async function createLoginLink(formData: FormData) {
+  const profile = await adminOnly();
+  const supabase = createAdminClient();
+  const projectId = String(formData.get("project_id") || "");
+
+  const { data: project } = await supabase
+    .from("projects")
+    .select("id, title, customer_id, customers:customer_id(id, name, email)")
+    .eq("id", projectId)
+    .maybeSingle();
+  if (!project) throw new Error("Project niet gevonden");
+
+  const customer = project.customers as unknown as {
+    id: string;
+    name: string;
+    email: string | null;
+  } | null;
+  const probleem = emailProblem(customer?.email);
+  if (probleem || !customer) throw new Error(probleem ?? "Geen klant");
+
+  const email = String(customer.email).trim();
+  const { data, error } = await supabase.auth.admin.generateLink({
+    type: "magiclink",
+    email,
+  });
+  if (error) throw new Error(`Kon inloglink niet maken: ${error.message}`);
+
+  const link = buildLoginLink(data.properties);
+  if (!link) throw new Error("Supabase gaf geen bruikbaar token terug.");
+
+  await supabase.from("portal_invites").insert({
+    customer_id: customer.id,
+    project_id: project.id,
+    email,
+    kind: "uitnodiging",
+    status: "drooggelogd",
+    action_link: link,
+    message: `Nieuwe inloglink voor ${customer.name} — project "${project.title}".`,
+    created_by: profile.id,
+  });
+
+  refresh(project.id);
 }
 
 export async function unpublishProject(formData: FormData) {

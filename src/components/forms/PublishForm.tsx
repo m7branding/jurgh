@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormState, useFormStatus } from "react-dom";
-import { publishProject, unpublishProject } from "@/app/actions/publish";
+import { publishProject, unpublishProject, createLoginLink } from "@/app/actions/publish";
 import { formatDateTime } from "@/lib/constants";
 
 function Submit({ label, busy, variant = "primary" }: { label: string; busy: string; variant?: "primary" | "ghost" }) {
@@ -26,7 +26,7 @@ export function PublishPanel({
 
   if (publishedAt) {
     return (
-      <div className="space-y-3">
+      <div className="flex flex-col gap-3">
         <p className="text-sm text-jurgh-text">
           Zichtbaar voor de klant sinds{" "}
           <span className="font-semibold">{formatDateTime(publishedAt)}</span>.
@@ -42,9 +42,14 @@ export function PublishPanel({
           <input type="hidden" name="project_id" value={projectId} />
           <Submit label="Intrekken" busy="Intrekken…" variant="ghost" />
         </form>
+        <form action={createLoginLink}>
+          <input type="hidden" name="project_id" value={projectId} />
+          <Submit label="Nieuwe inloglink maken" busy="Bezig…" variant="ghost" />
+        </form>
         <p className="text-xs text-jurgh-muted">
           Intrekken raakt de status van het project niet — het dossier verdwijnt alleen uit het
-          zicht van de klant.
+          zicht van de klant. Een inloglink werkt één keer en verloopt; maak er gerust een nieuwe,
+          je vindt 'm onder Uitnodigingen.
         </p>
       </div>
     );

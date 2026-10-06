@@ -1,5 +1,7 @@
 "use client";
 
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { useFormState, useFormStatus } from "react-dom";
 import { signIn } from "./actions";
 import { Logo } from "@/components/ui";
@@ -10,6 +12,23 @@ function SubmitButton() {
     <button type="submit" className="btn-primary w-full py-3" disabled={pending}>
       {pending ? "Bezig met inloggen…" : "Inloggen"}
     </button>
+  );
+}
+
+/** Melding na een inloglink die niet (meer) werkt. */
+function LinkMelding() {
+  const fout = useSearchParams().get("fout");
+  if (!fout) return null;
+
+  const tekst =
+    fout === "verlopen"
+      ? "Deze inloglink is verlopen of al gebruikt. Vraag JURGH om een nieuwe."
+      : "Deze inloglink klopt niet. Vraag JURGH om een nieuwe.";
+
+  return (
+    <p className="mt-4 rounded-lg border border-jurgh-gold/40 bg-jurgh-gold/10 px-3 py-2 text-sm text-jurgh-gold">
+      {tekst}
+    </p>
   );
 }
 
@@ -30,6 +49,10 @@ export default function LoginPage() {
         <div className="card p-8">
           <h1 className="text-xl font-bold text-jurgh-text">Welkom terug</h1>
           <p className="mt-1 text-sm text-jurgh-muted">Log in op het JURGH Detailing Portal.</p>
+
+          <Suspense fallback={null}>
+            <LinkMelding />
+          </Suspense>
 
           <form action={formAction} className="mt-6 space-y-4">
             <div>
