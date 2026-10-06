@@ -1,4 +1,6 @@
 import { requireProfile } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import { WelcomeDialog, type WelcomeVariant } from "@/components/WelcomeDialog";
 import { listProjects } from "@/lib/data";
 import { ProjectCard } from "@/components/ProjectCard";
 import { StatCard, SectionTitle, EmptyState } from "@/components/ui";
@@ -22,19 +24,26 @@ export default async function KlantDashboard() {
 
   const firstName = profile.full_name?.split(" ")[0] || "daar";
 
+  // Welkomstscherm: eerste keer een introductie, tweede keer een korte groet,
+  // daarna niets meer. De teller staat op het profiel, dus het werkt ook op
+  // een ander apparaat.
+  const supabase = createClient();
+  const { data: welcome } = await supabase
+    .from("profiles")
+    .select("welcome_seen_count")
+    .eq("id", profile.id)
+    .maybeSingle();
+  const seen = Number(welcome?.welcome_seen_count ?? 0);
+  const welcomeVariant: WelcomeVariant | null =
+    seen === 0 ? "eerste" : seen === 1 ? "terug" : null;
+
   return (
     <div className="space-y-8">
-      {/* Welkomstblok */}
-      <div className="card relative overflow-hidden p-8">
-        <div className="relative z-10">
-          <p className="text-sm uppercase tracking-wide text-jurgh-red">JURGH Car Dossier</p>
-          <h1 className="mt-1 text-3xl font-black text-jurgh-text">Welkom terug, {firstName}</h1>
-          <p className="mt-2 max-w-lg text-jurgh-muted">
-            Hier volg je live de voortgang van je auto: behandelingen, foto's vanuit de
-            werkplaats en al je documenten op één plek.
-          </p>
-        </div>
-        <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-jurgh-red/20 blur-3xl" />
+      <WelcomeDialog variant={welcomeVariant} name={profile.full_name} />
+
+      <div>
+        <p className="text-sm uppercase tracking-wide text-jurgh-red">JURGH Car Dossier</p>
+        <h1 className="mt-1 text-3xl font-black text-jurgh-text">Hallo {firstName}</h1>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">

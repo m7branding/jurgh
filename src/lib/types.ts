@@ -50,6 +50,9 @@ export type Project = {
   // publiceren staat los van status: leeg = de klant ziet het project niet
   published_at: string | null;
   published_by: string | null;
+  // klant heeft het aangevraagd; het vinkje erboven zet de admin
+  loaner_car_requested_at: string | null;
+  transport_requested_at: string | null;
   customers?: Customer;
   vehicles?: Vehicle;
 };

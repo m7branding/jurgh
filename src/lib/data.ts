@@ -56,6 +56,23 @@ export async function getWorkLogs(projectId: string) {
   return data ?? [];
 }
 
+/** Links per dienst (webpagina + plan van aanpak), één rij per projecttype. */
+export async function getServiceLink(projectType: string) {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("service_links")
+    .select("*")
+    .eq("project_type", projectType)
+    .maybeSingle();
+  return data as { project_type: string; website_url: string | null; plan_url: string | null } | null;
+}
+
+export async function listServiceLinks() {
+  const supabase = createClient();
+  const { data } = await supabase.from("service_links").select("*").order("project_type");
+  return data ?? [];
+}
+
 export async function getExtraWorkCatalog() {
   const supabase = createClient();
   const { data } = await supabase
@@ -168,6 +185,8 @@ export type SignedPhoto = {
   caption: string | null;
   visible_to_customer: boolean;
   created_at: string;
+  /** gezet als deze foto bij een meerwerkregel hoort (zelfde rij, twee plekken) */
+  extra_work_id: string | null;
 };
 
 export async function getPhotos(projectId: string): Promise<SignedPhoto[]> {
@@ -191,6 +210,7 @@ export async function getPhotos(projectId: string): Promise<SignedPhoto[]> {
         caption: p.caption,
         visible_to_customer: p.visible_to_customer,
         created_at: p.created_at,
+        extra_work_id: p.extra_work_id ?? null,
       };
     })
   );

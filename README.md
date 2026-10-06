@@ -44,7 +44,7 @@ drie testaccounts mét demo-dossier. Je mag het veilig opnieuw draaien.
 > volgorde: `migrations/0001_init.sql` → `0002_rls.sql` → `0003_storage.sql` →
 > `0004_vehicle_photos.sql` → `0005_extra_work.sql` → `0006_workflow_extensions.sql`
 > → `0007_project_types_plate.sql` → `0008_offorte.sql` → `0009_publiceren.sql`
-> → `seed.sql`.
+> → `0010_klantdossier.sql` → `seed.sql`.
 
 Testaccounts (wachtwoord voor alle: `JurghTest123!`):
 
@@ -249,6 +249,57 @@ op `false` kan.
 
 ---
 
+## Het klantdossier
+
+De klantpagina (`/klant/dossier/[id]`) is opgebouwd rond wat de klant wil weten.
+De admin- en medewerkerpagina blijven ongewijzigd.
+
+**Bovenaan** staat waar hij aan toe is: dienstnaam, projecttitel, de auto met
+foto (of een nette placeholder), kenteken en km-stand, de status voluit en de
+voortgangsbalk. Daaronder twee datums, waarvan de relevante wordt uitgelicht:
+de afspraakdatum zolang de afspraak nog moet komen, de verwachte oplevering
+zodra de auto binnen is.
+
+**Daaronder vier tabbladen:**
+
+| Tab | Inhoud |
+| --- | --- |
+| Plan van aanpak | De link bij deze dienst, plus een eventueel bericht van JURGH |
+| Foto's | Gegroepeerd in Voor werk, Tijdens werk en Resultaat |
+| Extra's & Bijzonderheden | Leenauto en transport aanvragen, upsells, meerwerk en opmerkingen. Rood bolletje zodra er meerwerk of een opmerking is |
+| Documenten & links | Offertes en facturen, de webpagina van de dienst en het plan van aanpak |
+
+### Aanvragen, niet zelf aanvinken
+
+Klikt de klant op "Leenauto aanvragen", dan zet dat `loaner_car_requested_at` —
+niet het vinkje. De admin ziet op de projectpagina een badge "Leenauto
+aangevraagd" en kent het toe. Hetzelfde geldt voor transport en voor opties uit
+de meerwerk-catalogus, die binnenkomen met status *Door klant aangevraagd*.
+
+De klant heeft geen schrijfrechten op `projects` of `extra_work`; die verzoeken
+lopen via security-definer functies die eerst controleren of het project van hem
+is én gepubliceerd. Twee keer hetzelfde aanvragen levert één tijdlijnregel op.
+
+### Links per dienst
+
+Onder **Admin → Diensten** vul je per projecttype één keer de webpagina en het
+plan van aanpak in. Elk project van dat type toont ze automatisch.
+
+### Foto bij meerwerk
+
+Een foto kan aan een meerwerkregel gekoppeld worden (keuzelijst bij het
+uploaden). Hij verschijnt dan zowel in het fototabblad als bij die meerwerkregel
+— één rij in de database, twee plekken in beeld.
+
+### Welkomstschermen
+
+De eerste keer dat een klant inlogt krijgt hij een introductie van wat het
+dossier te bieden heeft; de tweede keer een korte groet. Daarna niets meer. De
+teller (`profiles.welcome_seen_count`) staat op het profiel, dus het werkt ook
+als hij op een ander apparaat inlogt.
+
+---
+
 ## Architectuur
 
 ```
@@ -271,7 +322,7 @@ src/
     offorte-import.ts     # offerte binnenhalen als klant/auto/project
     rdw.ts                # kentekencheck (open data RDW)
 supabase/
-  migrations/             # 0001 schema · 0002 RLS · 0003 storage · … · 0009 publiceren
+  migrations/             # 0001 schema · 0002 RLS · 0003 storage · … · 0010 klantdossier
   seed.mjs                # testaccounts + demo-dossier
 ```
 

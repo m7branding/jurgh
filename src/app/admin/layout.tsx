@@ -8,6 +8,7 @@ const nav: NavItem[] = [
   { href: "/admin/autos", label: "Auto's" },
   { href: "/admin/uren", label: "Uren & werk" },
   { href: "/admin/catalogus", label: "Meerwerk-catalogus" },
+  { href: "/admin/diensten", label: "Diensten" },
   { href: "/admin/uitnodigingen", label: "Uitnodigingen" },
   { href: "/admin/projecten/nieuw", label: "Nieuw project" },
 ];

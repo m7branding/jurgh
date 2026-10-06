@@ -301,7 +301,13 @@ export function WorkLogRow({
 }
 
 // ---------- Foto uploaden ----------
-export function PhotoUploadForm({ projectId }: { projectId: string }) {
+export function PhotoUploadForm({
+  projectId,
+  extraWorkOptions = [],
+}: {
+  projectId: string;
+  extraWorkOptions?: { id: string; title: string }[];
+}) {
   const [state, action] = useFormState(uploadPhoto, {} as { error?: string; ok?: boolean });
   return (
     <form action={action} className="space-y-3">
@@ -330,6 +336,22 @@ export function PhotoUploadForm({ projectId }: { projectId: string }) {
           <label className="label">Bijschrift (optioneel)</label>
           <input name="caption" className="input" />
         </div>
+        {extraWorkOptions.length > 0 && (
+          <div className="sm:col-span-2">
+            <label className="label">Hoort bij extra werk (optioneel)</label>
+            <select name="extra_work_id" className="input" defaultValue="">
+              <option value="">Niet gekoppeld</option>
+              {extraWorkOptions.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.title}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-jurgh-muted">
+              De foto verschijnt dan zowel bij de foto's als bij die meerwerkregel.
+            </p>
+          </div>
+        )}
       </div>
       <label className="flex items-center gap-2 text-sm text-jurgh-muted">
         <input type="checkbox" name="visible_to_customer" defaultChecked className="accent-jurgh-red" />

@@ -170,6 +170,13 @@ export async function ProjectDetail({
                 </Badge>
               )}
               {project.transport && <Badge tone="neutral">🚛 Transport</Badge>}
+              {/* verzoeken van de klant; het vinkje erboven zet de admin zelf */}
+              {!project.loaner_car && project.loaner_car_requested_at && (
+                <Badge tone="amber">🚗 Leenauto aangevraagd</Badge>
+              )}
+              {!project.transport && project.transport_requested_at && (
+                <Badge tone="amber">🚛 Transport aangevraagd</Badge>
+              )}
               {isStaff && project.offorte_proposal_nr && (
                 <Badge tone="neutral">📄 {project.offorte_proposal_nr.trim()}</Badge>
               )}
@@ -433,7 +440,13 @@ export async function ProjectDetail({
             )}
             {isStaff && (
               <div className="mt-4 border-t border-jurgh-border pt-4">
-                <PhotoUploadForm projectId={projectId} />
+                <PhotoUploadForm
+                  projectId={projectId}
+                  extraWorkOptions={(extraWork as any[]).map((e) => ({
+                    id: e.id,
+                    title: e.title,
+                  }))}
+                />
               </div>
             )}
           </Collapsible>

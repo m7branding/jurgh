@@ -173,6 +173,8 @@ export const WORK_TYPE_LABEL: Record<WorkType, string> = Object.fromEntries(
 
 export type ExtraWorkStatus =
   | "concept"
+  // door de klant zelf aangevraagd vanuit de catalogus
+  | "aangevraagd"
   | "voorgesteld"
   | "intern_akkoord"
   | "klant_akkoord"
@@ -181,6 +183,7 @@ export type ExtraWorkStatus =
 
 export const EXTRA_WORK_STATUS_LABEL: Record<ExtraWorkStatus, string> = {
   concept: "Concept",
+  aangevraagd: "Door klant aangevraagd",
   voorgesteld: "Voorgesteld",
   intern_akkoord: "Intern akkoord",
   klant_akkoord: "Klant akkoord",
@@ -189,6 +192,37 @@ export const EXTRA_WORK_STATUS_LABEL: Record<ExtraWorkStatus, string> = {
 };
 
 export type PricingMode = "per_uur" | "totaal";
+
+// ---------- fotogroepen voor het klantdossier ----------
+// De klant denkt in drie momenten, niet in zes labels.
+export const PHOTO_GROUPS: { id: string; label: string; labels: PhotoLabel[] }[] = [
+  { id: "voor", label: "Voor werk", labels: ["voor_behandeling"] },
+  {
+    id: "tijdens",
+    label: "Tijdens werk",
+    labels: ["tijdens_behandeling", "detailfoto", "schade_bijzonderheid"],
+  },
+  { id: "resultaat", label: "Resultaat", labels: ["na_behandeling", "oplevering"] },
+];
+
+// ---------- fases, voor het uitlichten in de tijdlijn ----------
+const ORDER_AUTO_ONTVANGEN = 5;
+const ORDER_AFGEROND = 10;
+
+/** Afspraak staat nog te gebeuren: dan is de afspraakdatum het belangrijkst. */
+export function afspraakAanstaand(status: ProjectStatus): boolean {
+  return statusOrder(status) < ORDER_AUTO_ONTVANGEN;
+}
+
+/** Auto is binnen en er wordt gewerkt: dan telt de verwachte oplevering. */
+export function werkActief(status: ProjectStatus): boolean {
+  const order = statusOrder(status);
+  return order >= ORDER_AUTO_ONTVANGEN && order < ORDER_AFGEROND;
+}
+
+export function projectLopend(status: ProjectStatus): boolean {
+  return !["afgerond", "gefactureerd", "gearchiveerd"].includes(status);
+}
 
 export const PRICING_MODES: { value: PricingMode; label: string }[] = [
   { value: "totaal", label: "Totaalbedrag" },

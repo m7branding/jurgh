@@ -380,12 +380,17 @@ export async function uploadPhoto(_prev: unknown, formData: FormData) {
     .upload(path, file, { contentType: file.type, upsert: false });
   if (upErr) return { error: "Upload mislukt: " + upErr.message };
 
+  // Hoort de foto bij een meerwerkregel, dan staat hij straks op twee plekken
+  // in het klantdossier — maar het blijft één rij.
+  const extraWorkId = String(formData.get("extra_work_id") || "").trim();
+
   const { error } = await supabase.from("project_photos").insert({
     project_id: projectId,
     storage_path: path,
     label: String(formData.get("label") || "tijdens_behandeling") as PhotoLabel,
     caption: String(formData.get("caption") || "") || null,
     visible_to_customer: formData.get("visible_to_customer") === "on",
+    extra_work_id: extraWorkId || null,
     uploaded_by: profile.id,
   });
   if (error) return { error: error.message };
