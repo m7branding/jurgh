@@ -89,6 +89,16 @@ export async function listAllWorkLogs() {
   return data ?? [];
 }
 
+export async function listPortalInvites() {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("portal_invites")
+    .select("*, customers:customer_id(name), projects:project_id(id, title)")
+    .order("created_at", { ascending: false })
+    .limit(200);
+  return data ?? [];
+}
+
 export async function listCustomersOverview() {
   const supabase = createClient();
   const { data } = await supabase

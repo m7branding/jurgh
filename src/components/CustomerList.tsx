@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui";
 import { toggleCustomerReminders } from "@/app/actions/projects";
+import { updateCustomerEmail } from "@/app/actions/publish";
 
 type CustomerRow = {
   id: string;
@@ -58,9 +59,24 @@ export function CustomerList({ customers }: { customers: CustomerRow[] }) {
                     {c.is_business && <Badge tone="neutral">{c.company_name || "Zakelijk"}</Badge>}
                   </td>
                   <td className="py-2.5 pr-3 text-jurgh-muted">
-                    {c.email && <div>{c.email}</div>}
-                    {c.phone && <div>{c.phone}</div>}
-                    {!c.email && !c.phone && "—"}
+                    {/* e-mailadres is bewerkbaar: publiceren kan niet met een testadres */}
+                    <form action={updateCustomerEmail} className="flex items-center gap-1">
+                      <input type="hidden" name="customer_id" value={c.id} />
+                      <input
+                        name="email"
+                        type="email"
+                        defaultValue={c.email ?? ""}
+                        placeholder="geen e-mailadres"
+                        className="input max-w-[220px] px-2 py-1 text-xs"
+                      />
+                      <button type="submit" className="btn-ghost px-2 py-1 text-xs">
+                        Opslaan
+                      </button>
+                    </form>
+                    {c.email && /\.invalid$/i.test(c.email) && (
+                      <p className="mt-1 text-xs text-jurgh-gold">Testadres — publiceren lukt hiermee niet</p>
+                    )}
+                    {c.phone && <div className="mt-1">{c.phone}</div>}
                   </td>
                   <td className="py-2.5 pr-3 text-jurgh-muted">
                     {c.vehicles.length === 0

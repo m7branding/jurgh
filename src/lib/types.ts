@@ -47,6 +47,9 @@ export type Project = {
   offorte_proposal_id: number | null;
   offorte_proposal_nr: string | null;
   offorte_proposal_url: string | null;
+  // publiceren staat los van status: leeg = de klant ziet het project niet
+  published_at: string | null;
+  published_by: string | null;
   customers?: Customer;
   vehicles?: Vehicle;
 };

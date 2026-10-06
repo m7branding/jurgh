@@ -37,9 +37,12 @@ export function ProjectCard({
           />
         </div>
         <div className="space-y-3 p-4">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <StatusBadge status={project.status as ProjectStatus} />
-            <Badge tone="neutral">{projectTypeLabel(project.type)}</Badge>
+            <div className="flex items-center gap-2">
+              {mode !== "klant" && !project.published_at && <Badge tone="amber">🔒</Badge>}
+              <Badge tone="neutral">{projectTypeLabel(project.type)}</Badge>
+            </div>
           </div>
           <div className="min-w-0">
             <h3 className="font-semibold text-jurgh-text">{vehicleTitle(v)}</h3>

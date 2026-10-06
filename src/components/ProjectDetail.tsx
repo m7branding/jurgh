@@ -40,6 +40,7 @@ import {
   Collapsible,
   Plate,
 } from "@/components/ui";
+import { PublishPanel } from "@/components/forms/PublishForm";
 import {
   StatusForm,
   CompleteButton,
@@ -172,6 +173,12 @@ export async function ProjectDetail({
               {isStaff && project.offorte_proposal_nr && (
                 <Badge tone="neutral">📄 {project.offorte_proposal_nr.trim()}</Badge>
               )}
+              {isStaff &&
+                (project.published_at ? (
+                  <Badge tone="green">👁 Zichtbaar voor klant</Badge>
+                ) : (
+                  <Badge tone="amber">🔒 Niet gepubliceerd</Badge>
+                ))}
             </div>
             <h1 className="mt-3 text-2xl font-bold text-jurgh-text">{project.title}</h1>
             <p className="mt-1 text-jurgh-muted">
@@ -225,6 +232,19 @@ export async function ProjectDetail({
           </div>
         </div>
       </div>
+
+      {isAdmin && (
+        <div className="panel p-4">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-jurgh-muted">
+            Zichtbaarheid voor de klant
+          </h2>
+          <PublishPanel
+            projectId={projectId}
+            publishedAt={project.published_at}
+            customerEmail={c?.email ?? null}
+          />
+        </div>
+      )}
 
       {isStaff && (
         <div className="panel flex flex-wrap items-center justify-between gap-3 p-4">

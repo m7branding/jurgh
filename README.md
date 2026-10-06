@@ -43,7 +43,8 @@ drie testaccounts mét demo-dossier. Je mag het veilig opnieuw draaien.
 > Wil je het stap voor stap? Draai dan in plaats daarvan de losse bestanden in
 > volgorde: `migrations/0001_init.sql` → `0002_rls.sql` → `0003_storage.sql` →
 > `0004_vehicle_photos.sql` → `0005_extra_work.sql` → `0006_workflow_extensions.sql`
-> → `0007_project_types_plate.sql` → `seed.sql`.
+> → `0007_project_types_plate.sql` → `0008_offorte.sql` → `0009_publiceren.sql`
+> → `seed.sql`.
 
 Testaccounts (wachtwoord voor alle: `JurghTest123!`):
 
@@ -204,6 +205,50 @@ offertes binnen, met diezelfde dummy-adressen. Veilig opnieuw te draaien.
 
 ---
 
+## Publiceren naar de klant
+
+Een project is er voor de werkplaats zodra het binnenkomt; de klant ziet het pas
+als een admin het **publiceert**. Dat staat los van de projectstatus: publiceren
+kan in elke fase, en intrekken ook, zonder de status aan te raken.
+
+Bij publiceren gebeurt er drie dingen:
+
+1. er komt een klantaccount voor het e-mailadres (bestaat er al een, dan wordt die gebruikt);
+2. dat account wordt aan het klantrecord gekoppeld via `customers.profile_id`;
+3. `projects.published_at` wordt gezet, waarna Row Level Security het dossier vrijgeeft.
+
+De afscherming zit dus in de database, niet in de UI. `owns_project()` eist
+`published_at is not null`, en foto's, bijzonderheden, documenten en meerwerk
+lopen allemaal via die functie — die verdwijnen dus mee.
+
+### Inloggen
+
+De klant logt in met een **magic link**: mailadres invullen, mail openen, klikken.
+Geen wachtwoord. Let wel: dat is één factor — wie bij de mailbox kan, kan erin.
+Echte 2FA zou wachtwoord plus authenticator-app betekenen.
+
+### Testfase: droogloop
+
+Met `PORTAL_MAIL_DRY_RUN=true` (de standaard) wordt er **niets verstuurd**. De
+inloglink wordt gegenereerd en bewaard in `portal_invites`, zichtbaar onder
+**Admin → Uitnodigingen**, zodat je de hele flow zelf kunt doorlopen. Zo'n link
+is een sleutel tot het dossier van die klant; de tabel is daarom alleen voor
+admin leesbaar en de link verloopt vanzelf.
+
+Publiceren weigert bij een ontbrekend of `.invalid` adres — de klanten die via
+Offorte in de testfase binnenkomen zijn daarmee per definitie onbereikbaar. Wil
+je het testen, zet dan op **Admin → Klanten** je eigen adres bij die klant.
+Met plus-adressering (`jij+klant1@...`) maak je zoveel testklanten als je wilt.
+
+### Voordat dit live kan
+
+Supabase's ingebouwde mailserver doet **2 berichten per uur** en bezorgt alleen
+aan teamleden van het Supabase-project. Er moet dus eigen SMTP ingericht worden
+(Supabase → Authentication → SMTP, bijvoorbeeld via Resend) vóór `PORTAL_MAIL_DRY_RUN`
+op `false` kan.
+
+---
+
 ## Architectuur
 
 ```
@@ -226,7 +271,7 @@ src/
     offorte-import.ts     # offerte binnenhalen als klant/auto/project
     rdw.ts                # kentekencheck (open data RDW)
 supabase/
-  migrations/             # 0001 schema · 0002 RLS · 0003 storage · … · 0008 Offorte
+  migrations/             # 0001 schema · 0002 RLS · 0003 storage · … · 0009 publiceren
   seed.mjs                # testaccounts + demo-dossier
 ```
 
