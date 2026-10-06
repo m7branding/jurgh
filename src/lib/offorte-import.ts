@@ -51,6 +51,20 @@ async function resolvePlate(candidates: string[]): Promise<RdwVehicle | null> {
   return null;
 }
 
+/** Terugdraaien wat deze ronde zelf heeft aangemaakt. */
+async function rollback(
+  supabase: ReturnType<typeof createAdminClient>,
+  vehicleId: string | null,
+  customerId: string | null
+) {
+  try {
+    if (vehicleId) await supabase.from("vehicles").delete().eq("id", vehicleId);
+    if (customerId) await supabase.from("customers").delete().eq("id", customerId);
+  } catch {
+    // opruimen is bijvangst; de oorspronkelijke fout blijft leidend
+  }
+}
+
 export async function importWonProposal(proposalId: number | string): Promise<ImportResult> {
   const supabase = createAdminClient();
   const testMode = isTestMode();
@@ -69,10 +83,18 @@ export async function importWonProposal(proposalId: number | string): Promise<Im
     };
   }
 
-  // 2. Offerte ophalen
+  // 2. Offerte ophalen. Let op: Offorte antwoordt op een onbekend offertenummer
+  //    met 200 en een leeg object, niet met een 404. Daarom hier een harde
+  //    controle vóór er ook maar iets wordt weggeschreven.
   const proposal = await offorteFetch<OfforteProposal>(`proposals/${proposalId}/details`);
-  if (proposal.status && proposal.status !== "won") {
-    return { status: "genegeerd", message: `Offerte ${proposalId} heeft status ${proposal.status}.` };
+  if (!proposal || !proposal.id) {
+    return { status: "genegeerd", message: `Offerte ${proposalId} bestaat niet in Offorte.` };
+  }
+  if (proposal.status !== "won") {
+    return {
+      status: "genegeerd",
+      message: `Offerte ${proposalId} heeft status ${proposal.status ?? "onbekend"}, niet 'won'.`,
+    };
   }
 
   const mappedCustomer = mapCustomer(proposal);
@@ -81,6 +103,10 @@ export async function importWonProposal(proposalId: number | string): Promise<Im
   // 3. Klant: eerst op het Offorte-contact, dan op e-mail (buiten de testfase,
   //    want in de testfase staat er een dummyadres in).
   let customerId: string | null = null;
+  // Supabase kent geen transactie over meerdere REST-calls heen, dus houden we
+  // bij wat wij in deze ronde aanmaken om het terug te draaien als het misgaat.
+  let createdCustomerId: string | null = null;
+  let createdVehicleId: string | null = null;
   if (mappedCustomer.offorteContactId) {
     const { data } = await supabase
       .from("customers")
@@ -119,6 +145,7 @@ export async function importWonProposal(proposalId: number | string): Promise<Im
       .single();
     if (error) throw new Error(`Kon klant niet aanmaken: ${error.message}`);
     customerId = data.id;
+    createdCustomerId = data.id;
   } else {
     // bestaande klant: alleen de koppeling bijwerken, verder niets overschrijven
     await supabase
@@ -157,6 +184,7 @@ export async function importWonProposal(proposalId: number | string): Promise<Im
       .single();
     if (error) throw new Error(`Kon auto niet aanmaken: ${error.message}`);
     vehicleId = data.id;
+    createdVehicleId = data.id;
   }
 
   // 5. Project
@@ -190,6 +218,9 @@ export async function importWonProposal(proposalId: number | string): Promise<Im
     .single();
 
   if (error) {
+    // Project mislukt: laat geen losse klant en auto achter.
+    await rollback(supabase, createdVehicleId, createdCustomerId);
+
     // De unieke index kan toeslaan als twee afleveringen tegelijk binnenkomen.
     if (error.code === "23505") {
       const { data: race } = await supabase
