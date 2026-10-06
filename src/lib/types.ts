@@ -43,6 +43,10 @@ export type Project = {
   loaner_car: boolean;
   loaner_car_plate: string | null;
   transport: boolean;
+  // herkomst wanneer het project uit een geaccordeerde Offorte-offerte komt
+  offorte_proposal_id: number | null;
+  offorte_proposal_nr: string | null;
+  offorte_proposal_url: string | null;
   customers?: Customer;
   vehicles?: Vehicle;
 };

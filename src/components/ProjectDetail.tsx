@@ -169,6 +169,9 @@ export async function ProjectDetail({
                 </Badge>
               )}
               {project.transport && <Badge tone="neutral">🚛 Transport</Badge>}
+              {isStaff && project.offorte_proposal_nr && (
+                <Badge tone="neutral">📄 {project.offorte_proposal_nr.trim()}</Badge>
+              )}
             </div>
             <h1 className="mt-3 text-2xl font-bold text-jurgh-text">{project.title}</h1>
             <p className="mt-1 text-jurgh-muted">
@@ -192,6 +195,19 @@ export async function ProjectDetail({
                 />
               )}
             </dl>
+
+            {isStaff && project.offorte_proposal_url && (
+              <p className="mt-2 text-sm">
+                <a
+                  href={project.offorte_proposal_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-jurgh-red hover:underline"
+                >
+                  Bekijk de offerte in Offorte →
+                </a>
+              </p>
+            )}
 
             <div className="mt-6">
               <StatusProgress status={project.status as ProjectStatus} />

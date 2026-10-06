@@ -144,6 +144,66 @@ Open <http://localhost:3000> en log in.
 
 ---
 
+## Offorte-koppeling
+
+Wordt een offerte in Offorte geaccordeerd, dan maakt het portaal automatisch een
+project aan. Offorte stuurt daarvoor een `proposal_won`-webhook naar
+`/api/offorte/webhook`; het portaal haalt de offerte op en zet om wat erin staat.
+
+### Wat wordt overgenomen
+
+| Uit de offerte | Wordt in het portaal |
+| --- | --- |
+| Contact (naam, telefoon, KvK/btw) | Klant — gematcht op het Offorte-contact, anders nieuw aangemaakt |
+| Offertenaam, bijv. `PPF Gold voor Porsche 911 (KLG-11-S)` | Projecttitel, en het kenteken eruit → RDW-check voor merk, model, bouwjaar en kleur |
+| `price_total_original` (subtotaal) | Prijs **excl. btw** |
+| Geaccepteerde prijsregels | Projecttype (zwaarste bedrag wint), leenauto, transport, en een samenvatting in de interne notitie |
+| Offertenummer + viewer-link | Herkomst op het project, zichtbaar voor admin en medewerker |
+
+Een nieuw project komt binnen op status **Goedgekeurd**. Velden die Offorte niet
+levert blijven leeg — er wordt niets verzonnen. Staat er geen kenteken in de
+offertenaam, of herkent de RDW het niet, dan krijgt de auto geen kenteken en
+meldt de interne notitie dat de auto nog aangevuld moet worden.
+
+Dubbele afleveringen zijn onschadelijk: een project onthoudt zijn
+`offorte_proposal_id` en een tweede poging wordt overgeslagen.
+
+### Instellen
+
+1. Zet in Netlify → Site settings → Environment variables (zie `.env.example`):
+   `SUPABASE_SERVICE_ROLE_KEY`, `OFFORTE_ACCOUNT`, `OFFORTE_API_KEY`,
+   `OFFORTE_WEBHOOK_SECRET` en `OFFORTE_TEST_MODE`.
+   De service-role key is hier wél nodig: de webhook heeft geen ingelogde
+   gebruiker en moet langs Row Level Security.
+2. Registreer de webhook in Offorte:
+
+   ```bash
+   curl -X POST https://connect.offorte.com/api/v2/<account>/webhooks \
+     -H "Authorization: <api key>" \
+     -H "Content-Type: application/json" \
+     -d '{"payload_url":"https://<portaal>/api/offorte/webhook?token=<webhook secret>",
+          "payload_content_type":"json","events":["proposal_won"],"active":1}'
+   ```
+
+3. Controleer of het eindpunt leeft: `GET https://<portaal>/api/offorte/webhook`
+   geeft `{"ok":true}`.
+
+Elke aflevering komt in de tabel `offorte_events` te staan (admin leest mee), dus
+een mislukte import is terug te vinden zonder in de logs van Netlify te duiken.
+
+### Testfase
+
+Met `OFFORTE_TEST_MODE=true` (de standaard) krijgen klanten uit Offorte een
+onbezorgbaar `@jurgh.invalid` adres en staan herinneringen uit, zodat er niets
+naar een echte klant kan. Het echte adres blijft in Offorte staan. Het portaal
+maakt sowieso géén inlogaccount aan voor deze klanten, dus Supabase verstuurt
+ook geen uitnodigings- of bevestigingsmail.
+
+`supabase/import-offorte-laatste-3.sql` haalt eenmalig de drie laatst gewonnen
+offertes binnen, met diezelfde dummy-adressen. Veilig opnieuw te draaien.
+
+---
+
 ## Architectuur
 
 ```
@@ -160,8 +220,13 @@ src/
     auth.ts               # rol-helpers
     constants.ts          # labels (statussen, types, werkzaamheden)
     data.ts               # data-fetching + signed storage URLs
+    app/api/offorte/      # webhook-eindpunt voor geaccordeerde offertes
+  lib/
+    offorte.ts            # Offorte API-client + vertaling offerte → project
+    offorte-import.ts     # offerte binnenhalen als klant/auto/project
+    rdw.ts                # kentekencheck (open data RDW)
 supabase/
-  migrations/             # 0001 schema · 0002 RLS · 0003 storage
+  migrations/             # 0001 schema · 0002 RLS · 0003 storage · … · 0008 Offorte
   seed.mjs                # testaccounts + demo-dossier
 ```
 
