@@ -21,6 +21,7 @@ export function ProjectCard({
   mode?: "admin" | "medewerker" | "klant";
 }) {
   const v = project.vehicles;
+  const autoNaam = [v?.make, v?.model].filter(Boolean).join(" ");
   const [sheet, setSheet] = useState<QuickAction>(null);
   const canLog = mode === "admin" || mode === "medewerker";
   const canManageExtraWork = mode === "admin";
@@ -45,13 +46,15 @@ export function ProjectCard({
             </div>
           </div>
           <div className="min-w-0">
-            <h3 className="font-semibold text-jurgh-text">{vehicleTitle(v)}</h3>
+            {/* Is het merk onbekend, dan is de projecttitel de kop — anders
+                staat er twee keer dat we de auto niet kennen. */}
+            <h3 className="font-semibold text-jurgh-text">{autoNaam || project.title}</h3>
             <p className="truncate text-sm text-jurgh-muted">
               <Plate value={v?.license_plate} />
               {project.customers ? ` · ${project.customers.name}` : ""}
             </p>
           </div>
-          <p className="line-clamp-1 text-sm text-jurgh-muted">{project.title}</p>
+          {autoNaam && <p className="line-clamp-1 text-sm text-jurgh-muted">{project.title}</p>}
           <p className="text-sm text-jurgh-muted">Afspraak: {formatDate(project.appointment_date)}</p>
         </div>
       </Link>

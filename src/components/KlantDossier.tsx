@@ -35,7 +35,7 @@ import {
   StatusProgress,
   Badge,
   EmptyState,
-  Plate,
+  VehicleLine,
 } from "@/components/ui";
 import { Tabs, type TabItem } from "@/components/Tabs";
 import { ExtraWorkRespond } from "@/components/forms/StaffForms";
@@ -126,19 +126,22 @@ export async function KlantDossier({ projectId }: { projectId: string }) {
     {
       id: "fotos",
       label: "Foto's",
-      content: (
+      content: photos.length === 0 ? (
+        <p className="text-sm text-jurgh-muted">
+          Zodra we aan je auto beginnen, verschijnen hier de eerste foto's.
+        </p>
+      ) : (
         <div className="space-y-6">
           {PHOTO_GROUPS.map((groep) => {
             const inGroep = photos.filter((p) => groep.labels.includes(p.label as PhotoLabel));
+            if (inGroep.length === 0) return null;
             return (
               <section key={groep.id}>
                 <h3 className="mb-3 flex items-center gap-2 font-semibold text-jurgh-text">
                   {groep.label}
                   <span className="text-sm font-normal text-jurgh-muted">({inGroep.length})</span>
                 </h3>
-                {inGroep.length === 0 ? (
-                  <p className="text-sm text-jurgh-muted">Nog geen foto's in deze fase.</p>
-                ) : (
+                {(
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                     {inGroep.map((p) => (
                       <figure
@@ -227,11 +230,9 @@ export async function KlantDossier({ projectId }: { projectId: string }) {
           )}
 
           {/* ---- meerwerk ---- */}
-          <section className="space-y-3">
-            <h3 className="font-semibold text-jurgh-text">Extra werk</h3>
-            {meerwerk.length === 0 ? (
-              <p className="text-sm text-jurgh-muted">Er staat geen extra werk open.</p>
-            ) : (
+          {meerwerk.length > 0 && (
+            <section className="space-y-3">
+              <h3 className="font-semibold text-jurgh-text">Extra werk</h3>
               <ul className="space-y-3">
                 {meerwerk.map((e) => {
                   const foto = fotoBijMeerwerk.get(e.id);
@@ -272,8 +273,8 @@ export async function KlantDossier({ projectId }: { projectId: string }) {
                   );
                 })}
               </ul>
-            )}
-          </section>
+            </section>
+          )}
 
           {/* ---- upsells ---- */}
           {lopend && upsells.length > 0 && (
@@ -303,11 +304,9 @@ export async function KlantDossier({ projectId }: { projectId: string }) {
           )}
 
           {/* ---- opmerkingen ---- */}
-          <section className="space-y-3">
-            <h3 className="font-semibold text-jurgh-text">Bijzonderheden</h3>
-            {opmerkingen.length === 0 ? (
-              <p className="text-sm text-jurgh-muted">Nog geen bijzonderheden gemeld.</p>
-            ) : (
+          {opmerkingen.length > 0 && (
+            <section className="space-y-3">
+              <h3 className="font-semibold text-jurgh-text">Bijzonderheden</h3>
               <ul className="space-y-2">
                 {opmerkingen.map((r) => (
                   <li key={r.id} className="rounded-xl border border-jurgh-border bg-jurgh-black/30 p-4">
@@ -316,8 +315,19 @@ export async function KlantDossier({ projectId }: { projectId: string }) {
                   </li>
                 ))}
               </ul>
+            </section>
+          )}
+
+          {/* helemaal niets te melden: dan toch één zin */}
+          {!toonLeenauto &&
+            !toonTransport &&
+            meerwerk.length === 0 &&
+            opmerkingen.length === 0 &&
+            (!lopend || upsells.length === 0) && (
+              <p className="text-sm text-jurgh-muted">
+                Er staan op dit moment geen extra's of bijzonderheden open.
+              </p>
             )}
-          </section>
         </div>
       ),
     },
@@ -326,11 +336,9 @@ export async function KlantDossier({ projectId }: { projectId: string }) {
       label: "Documenten & links",
       content: (
         <div className="space-y-6">
-          <section className="space-y-3">
-            <h3 className="font-semibold text-jurgh-text">Documenten</h3>
-            {documents.length === 0 ? (
-              <p className="text-sm text-jurgh-muted">Nog geen documenten beschikbaar.</p>
-            ) : (
+          {documents.length > 0 && (
+            <section className="space-y-3">
+              <h3 className="font-semibold text-jurgh-text">Documenten</h3>
               <ul className="space-y-2">
                 {documents.map((d) => (
                   <li
@@ -351,12 +359,13 @@ export async function KlantDossier({ projectId }: { projectId: string }) {
                   </li>
                 ))}
               </ul>
-            )}
-          </section>
+            </section>
+          )}
 
-          <section className="space-y-3">
-            <h3 className="font-semibold text-jurgh-text">Over deze behandeling</h3>
-            <div className="flex flex-col gap-2 sm:flex-row">
+          {(serviceLink?.website_url || serviceLink?.plan_url) && (
+            <section className="space-y-3">
+              <h3 className="font-semibold text-jurgh-text">Over deze behandeling</h3>
+              <div className="flex flex-col gap-2 sm:flex-row">
               {serviceLink?.website_url && (
                 <a
                   href={serviceLink.website_url}
@@ -367,18 +376,20 @@ export async function KlantDossier({ projectId }: { projectId: string }) {
                   Meer over {projectTypeLabel(project.type)}
                 </a>
               )}
-              {serviceLink?.plan_url && (
-                <a href={serviceLink.plan_url} target="_blank" rel="noreferrer" className="btn-ghost">
-                  Plan van aanpak
-                </a>
-              )}
-            </div>
-            {!serviceLink?.website_url && !serviceLink?.plan_url && (
-              <p className="text-sm text-jurgh-muted">
-                Er staan nog geen links klaar voor deze behandeling.
-              </p>
-            )}
-          </section>
+                {serviceLink?.plan_url && (
+                  <a href={serviceLink.plan_url} target="_blank" rel="noreferrer" className="btn-ghost">
+                    Plan van aanpak
+                  </a>
+                )}
+              </div>
+            </section>
+          )}
+
+          {documents.length === 0 && !serviceLink?.website_url && !serviceLink?.plan_url && (
+            <p className="text-sm text-jurgh-muted">
+              Hier verschijnen je offerte, factuur en certificaten zodra ze klaarstaan.
+            </p>
+          )}
         </div>
       ),
     },
@@ -400,17 +411,15 @@ export async function KlantDossier({ projectId }: { projectId: string }) {
               </p>
               <h1 className="mt-1 text-2xl font-bold text-jurgh-text">{project.title}</h1>
               <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-jurgh-muted">
-                <span>{vehicleTitle(v)}</span>
-                <Plate value={v?.license_plate} className="text-jurgh-text" />
+                <VehicleLine make={v?.make} model={v?.model} plate={v?.license_plate} />
                 {v?.mileage != null && <span>{v.mileage.toLocaleString("nl-NL")} km</span>}
               </p>
             </div>
 
             <div>
               <p className="text-xs uppercase tracking-wide text-jurgh-muted">Status</p>
-              <div className="mt-1 flex flex-wrap items-center gap-3">
-                <span className="text-xl font-bold text-jurgh-text">{STATUS_LABEL[status]}</span>
-                <StatusBadge status={status} />
+              <div className="mt-1.5">
+                <StatusBadge status={status} large />
               </div>
             </div>
 

@@ -2,7 +2,7 @@ import Link from "next/link";
 import {
   STATUS_LABEL,
   statusOrder,
-  statusColor,
+  statusRgb,
   STATUS_MAX_ORDER,
   type ProjectStatus,
 } from "@/lib/constants";
@@ -57,6 +57,34 @@ export function Badge({
   );
 }
 
+// ---------- Regel onder de projecttitel: auto + kenteken ----------
+// Zonder merk, model én kenteken stond er twee keer hetzelfde ("Auto zonder
+// kenteken · Kenteken onbekend"); nu blijft er één regel over.
+export function VehicleLine({
+  make,
+  model,
+  plate,
+  className = "",
+}: {
+  make?: string | null;
+  model?: string | null;
+  plate?: string | null;
+  className?: string;
+}) {
+  const naam = [make, model].filter(Boolean).join(" ");
+
+  if (!naam && !hasPlate(plate)) {
+    return <span className={`italic text-jurgh-muted ${className}`}>Auto nog aan te vullen</span>;
+  }
+  if (!naam) return <Plate value={plate} className={className} />;
+
+  return (
+    <span className={className}>
+      {naam} · <Plate value={plate} />
+    </span>
+  );
+}
+
 // ---------- Kenteken ----------
 // Sinds migratie 0007 mag een auto (nog) geen kenteken hebben; dat moet zichtbaar
 // zijn zonder dat de layout verspringt.
@@ -75,17 +103,19 @@ export function Plate({
   return <span className={`font-mono uppercase tracking-wide ${className}`}>{value}</span>;
 }
 
-function hexToRgb(hex: string) {
-  const clean = hex.replace("#", "");
-  const bigint = parseInt(clean, 16);
-  return { r: (bigint >> 16) & 255, g: (bigint >> 8) & 255, b: bigint & 255 };
-}
-
-export function StatusBadge({ status }: { status: ProjectStatus }) {
-  const { r, g, b } = hexToRgb(statusColor(status));
+export function StatusBadge({
+  status,
+  large = false,
+}: {
+  status: ProjectStatus;
+  large?: boolean;
+}) {
+  const { r, g, b } = statusRgb(status);
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold"
+      className={`inline-flex items-center gap-1.5 rounded-full border font-semibold ${
+        large ? "px-4 py-1.5 text-base" : "px-2.5 py-1 text-xs"
+      }`}
       style={{
         backgroundColor: `rgba(${r}, ${g}, ${b}, 0.15)`,
         color: `rgb(${r}, ${g}, ${b})`,

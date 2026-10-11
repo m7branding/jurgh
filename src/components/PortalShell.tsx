@@ -47,7 +47,8 @@ export function PortalShell({
           <div className="flex items-center gap-3">
             <div className="hidden text-right sm:block">
               <p className="text-sm font-semibold leading-tight text-jurgh-text">{name || "Gebruiker"}</p>
-              <Badge tone={role === "klant" ? "neutral" : "red"}>{roleLabel[role]}</Badge>
+              {/* voor een klant zegt "Klant" niets; voor staff is de rol wél nuttig */}
+              {role !== "klant" && <Badge tone="red">{roleLabel[role]}</Badge>}
             </div>
             <form action="/auth/signout" method="post">
               <button className="btn-ghost px-3 py-1.5" type="submit">

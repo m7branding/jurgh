@@ -4,7 +4,6 @@ import { useFormState, useFormStatus } from "react-dom";
 import { useEffect, useRef, useState } from "react";
 import {
   updateStatus,
-  completeProject,
   addRemark,
   addWorkLog,
   updateWorkLog,
@@ -18,11 +17,14 @@ import {
   togglePhotoVisibility,
   updateProjectExtras,
   updateVehicleDetails,
+  updateProjectDates,
   addCatalogItem,
   deleteCatalogItem,
 } from "@/app/actions/projects";
 import {
   PROJECT_STATUSES,
+  STATUS_LABEL,
+  statusRgb,
   PHOTO_LABELS,
   WORK_TYPES,
   WORK_TYPE_LABEL,
@@ -45,36 +47,82 @@ function Pending({ label, busy }: { label: string; busy?: string }) {
 }
 
 // ---------- Status bijwerken (alleen admin) ----------
-export function StatusForm({ projectId, current }: { projectId: string; current: ProjectStatus }) {
-  const [status, setStatus] = useState<ProjectStatus>(current);
+export function StatusDropdown({
+  projectId,
+  current,
+}: {
+  projectId: string;
+  current: ProjectStatus;
+}) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const { r, g, b } = statusRgb(current);
+
+  // De badge zelf is de knop: een select eroverheen, onzichtbaar maar wel
+  // klikbaar. Zo verandert de status waar hij staat, zonder apart blok.
+  return (
+    <form ref={formRef} action={updateStatus} className="relative inline-flex">
+      <input type="hidden" name="project_id" value={projectId} />
+      <span
+        className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold"
+        style={{
+          backgroundColor: `rgba(${r}, ${g}, ${b}, 0.15)`,
+          color: `rgb(${r}, ${g}, ${b})`,
+          borderColor: `rgba(${r}, ${g}, ${b}, 0.35)`,
+        }}
+      >
+        {STATUS_LABEL[current]}
+        <span aria-hidden className="text-xs opacity-70">▾</span>
+      </span>
+      <select
+        name="status"
+        defaultValue={current}
+        onChange={() => formRef.current?.requestSubmit()}
+        aria-label="Status wijzigen"
+        className="absolute inset-0 cursor-pointer opacity-0"
+      >
+        {PROJECT_STATUSES.map((s) => (
+          <option key={s.value} value={s.value}>
+            {s.label}
+          </option>
+        ))}
+      </select>
+    </form>
+  );
+}
+
+// ---------- Afspraak- en opleverdatum, direct op de projectpagina ----------
+export function ProjectDateField({
+  projectId,
+  field,
+  label,
+  value,
+}: {
+  projectId: string;
+  field: "appointment_date" | "expected_delivery_date";
+  label: string;
+  value: string | null;
+}) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const verstreken = Boolean(value && value < new Date().toISOString().slice(0, 10));
 
   return (
-    <form action={updateStatus} className="space-y-3">
-      <input type="hidden" name="project_id" value={projectId} />
-      <div>
-        <label className="label">Nieuwe status</label>
-        <div className="flex items-center gap-2">
-          <select
-            name="status"
-            value={status}
-            onChange={(e) => setStatus(e.target.value as ProjectStatus)}
-            className="input"
-          >
-            {PROJECT_STATUSES.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-          <StatusBadge status={status} />
-        </div>
-      </div>
-      <div>
-        <label className="label">Toelichting (optioneel)</label>
-        <input name="note" className="input" placeholder="bijv. polijsten afgerond" />
-      </div>
-      <Pending label="Status bijwerken" busy="Bijwerken…" />
-    </form>
+    <div className="min-w-0">
+      <p className="text-xs uppercase tracking-wide text-jurgh-muted">{label}</p>
+      {verstreken ? (
+        <p className="font-medium text-jurgh-text">{formatDate(value)}</p>
+      ) : (
+        <form ref={formRef} action={updateProjectDates}>
+          <input type="hidden" name="project_id" value={projectId} />
+          <input
+            type="date"
+            name={field}
+            defaultValue={value ?? ""}
+            onChange={() => formRef.current?.requestSubmit()}
+            className="-ml-1 w-full max-w-[170px] rounded-lg border border-transparent bg-transparent px-1 py-0.5 font-medium text-jurgh-text hover:border-jurgh-border focus:border-jurgh-red/60 focus:outline-none"
+          />
+        </form>
+      )}
+    </div>
   );
 }
 
@@ -125,17 +173,6 @@ export function ProjectExtrasForm({
 }
 
 // ---------- Project afronden ----------
-export function CompleteButton({ projectId }: { projectId: string }) {
-  return (
-    <form action={completeProject}>
-      <input type="hidden" name="project_id" value={projectId} />
-      <button type="submit" className="btn-green w-full py-3">
-        ✓ Project afronden (markeren als compleet)
-      </button>
-    </form>
-  );
-}
-
 // ---------- Bijzonderheid toevoegen ----------
 export function RemarkForm({ projectId }: { projectId: string }) {
   const ref = useRef<HTMLFormElement>(null);
@@ -672,7 +709,7 @@ export function DeleteCatalogItemButton({ id }: { id: string }) {
 }
 
 // ---------- Auto-foto uploaden / vervangen ----------
-export function VehiclePhotoForm({
+export function VehiclePhotoButtons({
   vehicleId,
   projectId,
   hasPhoto,
@@ -681,21 +718,33 @@ export function VehiclePhotoForm({
   projectId: string;
   hasPhoto: boolean;
 }) {
+  const formRef = useRef<HTMLFormElement>(null);
   const [state, action] = useFormState(uploadVehiclePhoto, {} as { error?: string; ok?: boolean });
+
+  // Geen apart blok: een rond knopje over de foto. Potlood als er al een foto
+  // is, anders een plusje. Het bestandsveld zit eronder verstopt en verstuurt
+  // zichzelf zodra er iets gekozen is.
   return (
-    <form action={action} className="flex flex-wrap items-center gap-2">
+    <form ref={formRef} action={action} className="absolute bottom-3 right-3 flex items-center gap-2">
       <input type="hidden" name="vehicle_id" value={vehicleId} />
       <input type="hidden" name="project_id" value={projectId} />
-      <input
-        type="file"
-        name="file"
-        accept="image/*"
-        required
-        className="block max-w-[230px] text-xs text-jurgh-muted file:mr-2 file:rounded-lg file:border-0 file:bg-jurgh-red file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-jurgh-redDark"
-      />
-      <Pending label={hasPhoto ? "Foto vervangen" : "Auto-foto uploaden"} busy="Uploaden…" />
-      {state?.error && <span className="text-xs text-jurgh-red">{state.error}</span>}
-      {state?.ok && <span className="text-xs text-jurgh-green">Foto opgeslagen ✓</span>}
+      {state?.error && (
+        <span className="rounded-full bg-black/70 px-2.5 py-1 text-xs text-white">{state.error}</span>
+      )}
+      <label
+        title={hasPhoto ? "Foto vervangen" : "Foto toevoegen"}
+        className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white shadow-lg backdrop-blur transition hover:bg-black/80"
+      >
+        <input
+          type="file"
+          name="file"
+          accept="image/*"
+          className="sr-only"
+          onChange={() => formRef.current?.requestSubmit()}
+        />
+        <span aria-hidden>{hasPhoto ? "✎" : "+"}</span>
+        <span className="sr-only">{hasPhoto ? "Foto vervangen" : "Foto toevoegen"}</span>
+      </label>
     </form>
   );
 }

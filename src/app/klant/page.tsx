@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { WelcomeDialog, type WelcomeVariant } from "@/components/WelcomeDialog";
 import { listProjects } from "@/lib/data";
 import { ProjectCard } from "@/components/ProjectCard";
-import { StatCard, SectionTitle, EmptyState } from "@/components/ui";
+import { SectionTitle, EmptyState } from "@/components/ui";
 import { RewardsPanel } from "@/components/RewardsPanel";
 
 export const dynamic = "force-dynamic";
@@ -44,12 +44,6 @@ export default async function KlantDashboard() {
       <div>
         <p className="text-sm uppercase tracking-wide text-jurgh-red">JURGH Car Dossier</p>
         <h1 className="mt-1 text-3xl font-black text-jurgh-text">Hallo {firstName}</h1>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Lopende projecten" value={active.length} accent />
-        <StatCard label="Afgeronde behandelingen" value={done.length} />
-        <StatCard label="JURGH punten" value={points.toLocaleString("nl-NL")} />
       </div>
 
       {/* Rewards / spaarsysteem */}

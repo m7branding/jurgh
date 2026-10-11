@@ -199,6 +199,41 @@ export async function updateProjectExtras(formData: FormData) {
   refresh(projectId);
 }
 
+// ---------- Afspraak- en opleverdatum (alleen admin) ----------
+// Een datum die al verstreken is, ligt vast: dat is geschiedenis, geen planning.
+// De controle staat hier en niet alleen in het formulier, zodat een oud
+// geopend scherm 'm niet alsnog kan overschrijven.
+function isVerstreken(value: string | null | undefined): boolean {
+  if (!value) return false;
+  return value < new Date().toISOString().slice(0, 10);
+}
+
+export async function updateProjectDates(formData: FormData) {
+  await adminOnly();
+  const supabase = createClient();
+  const projectId = String(formData.get("project_id"));
+
+  const { data: huidig } = await supabase
+    .from("projects")
+    .select("appointment_date, expected_delivery_date")
+    .eq("id", projectId)
+    .maybeSingle();
+  if (!huidig) throw new Error("Project niet gevonden");
+
+  const patch: Record<string, unknown> = {};
+  if (formData.has("appointment_date") && !isVerstreken(huidig.appointment_date)) {
+    patch.appointment_date = String(formData.get("appointment_date") || "") || null;
+  }
+  if (formData.has("expected_delivery_date") && !isVerstreken(huidig.expected_delivery_date)) {
+    patch.expected_delivery_date = String(formData.get("expected_delivery_date") || "") || null;
+  }
+  if (Object.keys(patch).length === 0) return;
+
+  const { error } = await supabase.from("projects").update(patch).eq("id", projectId);
+  if (error) throw new Error(error.message);
+  refresh(projectId);
+}
+
 // ---------- Project afronden (markeren als compleet, alleen admin) ----------
 export async function completeProject(formData: FormData) {
   await adminOnly();

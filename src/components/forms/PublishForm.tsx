@@ -13,6 +13,36 @@ function Submit({ label, busy, variant = "primary" }: { label: string; busy: str
   );
 }
 
+/**
+ * Compacte variant voor een project dat al gepubliceerd is: geen blok meer,
+ * alleen twee kleine links onder de badge.
+ */
+export function PublishLinks({ projectId }: { projectId: string }) {
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+      <form action={createLoginLink}>
+        <input type="hidden" name="project_id" value={projectId} />
+        <button type="submit" className="text-jurgh-red hover:underline">
+          Nieuwe inloglink maken
+        </button>
+      </form>
+      <form
+        action={unpublishProject}
+        onSubmit={(e) => {
+          if (!confirm("Project intrekken? De klant kan het dossier daarna niet meer zien.")) {
+            e.preventDefault();
+          }
+        }}
+      >
+        <input type="hidden" name="project_id" value={projectId} />
+        <button type="submit" className="text-jurgh-muted hover:text-jurgh-text hover:underline">
+          Intrekken
+        </button>
+      </form>
+    </div>
+  );
+}
+
 export function PublishPanel({
   projectId,
   publishedAt,

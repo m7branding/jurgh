@@ -249,6 +249,18 @@ op `false` kan.
 
 ---
 
+## De projectpagina's
+
+Beide projectpagina's werken met tabbladen. De **adminpagina** heeft Proces
+(tijdlijn, notities, leenauto en transport), Foto's, Documenten,
+Urenregistratie en Meerwerk — dat laatste met een rood bolletje zodra de klant
+iets heeft aangevraagd. Een medewerker ziet dezelfde opzet zonder Documenten,
+en begint op Urenregistratie, want daarvoor komt hij.
+
+Bedienen gebeurt waar je kijkt: de status verander je via de badge bovenaan,
+de afspraak- en opleverdatum via een datumkiezer op het veld zelf (verstreken
+datums liggen vast), en de autofoto vervang je met het knopje op de foto.
+
 ## Het klantdossier
 
 De klantpagina (`/klant/dossier/[id]`) is opgebouwd rond wat de klant wil weten.

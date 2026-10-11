@@ -127,6 +127,13 @@ export function statusColor(status: ProjectStatus): string {
   return STATUS_COLOR[status] ?? "#8a8a93";
 }
 
+/** Statuskleur als losse kanalen, voor achtergrond en rand met doorzichtigheid. */
+export function statusRgb(status: ProjectStatus): { r: number; g: number; b: number } {
+  const hex = statusColor(status).replace("#", "");
+  const value = parseInt(hex, 16);
+  return { r: (value >> 16) & 255, g: (value >> 8) & 255, b: value & 255 };
+}
+
 export const DOCUMENT_TYPES: { value: DocumentType; label: string }[] = [
   { value: "offerte", label: "Offerte" },
   { value: "factuur", label: "Factuur" },
