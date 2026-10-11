@@ -48,8 +48,14 @@ async function findUserByEmail(
  * extra omgevingsvariabele bij en klopt hij ook op een preview-deploy.
  */
 function appUrl(): string {
-  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL;
-  if (fromEnv) return fromEnv.replace(/\/+$/, "");
+  // 1. expliciet ingesteld wint altijd
+  // 2. Netlify zet URL op het hoofddomein van de site
+  // 3. anders uit het verzoek — maar dat kan de deploy-specifieke host zijn
+  //    (https://<id>--jurgh.netlify.app), en op die host geldt de inlogcookie
+  //    van het hoofddomein niet.
+  const canonical = process.env.NEXT_PUBLIC_SITE_URL || process.env.URL;
+  if (canonical) return canonical.replace(/\/+$/, "");
+
   const h = headers();
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
   const proto = h.get("x-forwarded-proto") ?? "https";
