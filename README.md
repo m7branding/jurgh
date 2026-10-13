@@ -77,6 +77,16 @@ En de medewerkers van JURGH (wachtwoord voor alle: `JurghTest123!`):
 > het wachtwoord instelt. Zonder werkende mailbox kan iemand wél nooit zelf zijn
 > wachtwoord herstellen.
 
+### Demo-klant om te laten zien
+
+`supabase/demo-klant.sql` zet een klantaccount neer met één gevuld dossier
+(Porsche 911, glascoating, in behandeling): tijdlijn, berichten, meerwerk
+waarvan één nog op antwoord wacht, en uren in de admin. Inloggen met
+`demo@jurgh.test` / `JurghDemo2026!` — een eigen wachtwoord, zodat je het
+kunt delen zonder dat van de admin- en medewerkeraccounts weg te geven.
+Opnieuw draaien zet het dossier terug in de beginstand (datums schuiven mee
+met vandaag); foto's blijven staan. Foto's upload je zelf via de admin.
+
 ### 2. App online zetten via Netlify
 1. Koppel deze GitHub-repo in Netlify ("Import from Git"). Netlify draait zelf
    `npm install` + `npm run build` (de `@netlify/plugin-nextjs` staat al klaar).
