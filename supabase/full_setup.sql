@@ -591,9 +591,20 @@ alter table public.extra_work alter column status drop default;
 alter table public.extra_work alter column status type text using status::text;
 alter table public.extra_work alter column status set default 'concept';
 
-alter table public.extra_work drop constraint if exists extra_work_status_check;
-alter table public.extra_work add constraint extra_work_status_check
-  check (status in ('concept', 'voorgesteld', 'intern_akkoord', 'klant_akkoord', 'uitgevoerd', 'afgewezen'));
+-- Alleen aanmaken als hij er nog niet is. Migratie 0010 verruimt deze regel
+-- met 'aangevraagd'; zou 0006 'm bij een herhaalde run eerst weer op de oude
+-- zes waarden zetten, dan weigert Postgres dat zodra er al meerwerk met status
+-- 'aangevraagd' bestaat — en komt 0010 nooit aan de beurt.
+do $$ begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'extra_work_status_check'
+      and conrelid = 'public.extra_work'::regclass
+  ) then
+    alter table public.extra_work add constraint extra_work_status_check
+      check (status in ('concept', 'voorgesteld', 'intern_akkoord', 'klant_akkoord', 'uitgevoerd', 'afgewezen'));
+  end if;
+end $$;
 
 -- extra_work_read moet 'concept' ook afschermen voor de klant (naast intern_akkoord)
 create policy extra_work_read on public.extra_work
