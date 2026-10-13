@@ -16,8 +16,9 @@
 -- herinneringen staan uit. Het wachtwoord is bewust een ander dan dat van
 -- de medewerker- en admin-testaccounts.
 --
--- Twee voorbeeldlinks, allebei een PDF op de portaalsite zelf:
---   📎 Jouw offerte   → /voorbeeld/offerte-voorbeeld.pdf
+-- Twee links bij Documenten & links:
+--   📎 Jouw offerte   → de echte Offorte-offerte van het Valhalla-project
+--                       (zonder die link: /voorbeeld/offerte-voorbeeld.pdf)
 --   Wasinstructies    → /voorbeeld/wasinstructies-voorbeeld.pdf
 --
 -- Opnieuw draaien zet het dossier terug in de beginstand: datums schuiven
@@ -42,6 +43,8 @@ declare
   src_proj   uuid;
   src_veh    public.vehicles%rowtype;
   src_price  numeric;
+  src_url    text;
+  src_nr     text;
 begin
   -- ---------- 1. login-account ----------
   select id into uid from auth.users where email = demo_email;
@@ -109,7 +112,8 @@ begin
    where id = cust_id;
 
   -- ---------- 3. het Valhalla-project als bron ----------
-  select p.id, p.price into src_proj, src_price
+  select p.id, p.price, p.offorte_proposal_url, p.offorte_proposal_nr
+    into src_proj, src_price, src_url, src_nr
     from public.projects p
     left join public.vehicles v on v.id = p.vehicle_id
    where p.customer_id <> cust_id
@@ -170,10 +174,11 @@ begin
          transport = false,
          loaner_car_requested_at = null, -- aanvraagknoppen weer beschikbaar
          transport_requested_at = null,
-         -- voorbeeldlink: de paperclip "Jouw offerte" opent deze PDF
+         -- de paperclip "Jouw offerte" opent de echte Offorte-offerte; het
+         -- Offorte-id blijft leeg, want dat mag maar bij één project staan
          offorte_proposal_id = null,
-         offorte_proposal_nr = 'Voorbeeldofferte',
-         offorte_proposal_url = '/voorbeeld/offerte-voorbeeld.pdf',
+         offorte_proposal_nr = coalesce(nullif(trim(src_nr), ''), 'Voorbeeldofferte'),
+         offorte_proposal_url = coalesce(nullif(src_url, ''), '/voorbeeld/offerte-voorbeeld.pdf'),
          internal_notes = 'DEMO-dossier om het klantportaal te laten zien. Niet factureren.',
          customer_notes = $t$Hoi Thomas, wat mooi dat we je Valhalla mogen beschermen. In dit dossier volg je hoe het ervoor staat: de foto's, het stappenplan en eventuele extra's. Vragen tussendoor? Bel of app ons gerust.$t$
    where id = proj_id;

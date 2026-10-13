@@ -82,10 +82,11 @@ En de medewerkers van JURGH (wachtwoord voor alle: `JurghTest123!`):
 `supabase/demo-klant.sql` zet een klantaccount neer met één volledig gevuld
 dossier, gebaseerd op het Aston Martin Valhalla-project (PPF Diamant pakket):
 tijdlijn, berichten, meerwerk waarvan één nog op antwoord wacht, uren in de
-admin, en twee voorbeeldlinks — de offerte (📎) en de wasinstructies, allebei
-een PDF uit `public/voorbeeld/`. Autogegevens, autofoto en de voor de klant
-zichtbare foto's komen uit het echte project; dat project zelf blijft
-onaangeroerd. Inloggen met `demo@jurgh.test` / `JurghDemo2026!` — een eigen
+admin, de echte Offorte-offerte achter de paperclip (📎) en de wasinstructies
+als PDF uit `public/voorbeeld/`. Autogegevens, autofoto, de Offorte-link en de
+voor de klant zichtbare foto's komen uit het echte project; dat project zelf
+blijft onaangeroerd. Heeft het echte project geen Offorte-link, dan opent de
+paperclip de voorbeeld-offerte uit `public/voorbeeld/`. Inloggen met `demo@jurgh.test` / `JurghDemo2026!` — een eigen
 wachtwoord, zodat je het kunt delen zonder dat van de admin- en
 medewerkeraccounts weg te geven. Opnieuw draaien zet het dossier terug in de
 beginstand (datums schuiven mee met vandaag). Vereist migratie 0012.
