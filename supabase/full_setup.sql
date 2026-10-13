@@ -591,10 +591,14 @@ alter table public.extra_work alter column status drop default;
 alter table public.extra_work alter column status type text using status::text;
 alter table public.extra_work alter column status set default 'concept';
 
--- Alleen aanmaken als hij er nog niet is. Migratie 0010 verruimt deze regel
--- met 'aangevraagd'; zou 0006 'm bij een herhaalde run eerst weer op de oude
--- zes waarden zetten, dan weigert Postgres dat zodra er al meerwerk met status
--- 'aangevraagd' bestaat — en komt 0010 nooit aan de beurt.
+-- Migratie 0010 verruimt deze regel met 'aangevraagd'. Bij een herhaalde run
+-- mag 0006 de oude, strengere versie dus nooit tegen bestaande rijen toetsen:
+-- zodra er meerwerk met status 'aangevraagd' bestaat, weigert Postgres dat en
+-- komt 0010 niet aan de beurt.
+--   - bestaat de regel al, dan blijft hij staan;
+--   - ontbreekt hij (verse database, of een eerdere run die halverwege
+--     stopte), dan komt hij er als NOT VALID: nieuwe rijen worden gecontroleerd,
+--     bestaande niet. 0010 vervangt 'm verderop door de definitieve versie.
 do $$ begin
   if not exists (
     select 1 from pg_constraint
@@ -602,7 +606,8 @@ do $$ begin
       and conrelid = 'public.extra_work'::regclass
   ) then
     alter table public.extra_work add constraint extra_work_status_check
-      check (status in ('concept', 'voorgesteld', 'intern_akkoord', 'klant_akkoord', 'uitgevoerd', 'afgewezen'));
+      check (status in ('concept', 'voorgesteld', 'intern_akkoord', 'klant_akkoord', 'uitgevoerd', 'afgewezen'))
+      not valid;
   end if;
 end $$;
 
