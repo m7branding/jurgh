@@ -230,6 +230,10 @@ export type SignedDoc = {
   created_at: string;
 };
 
+function isLink(path: string): boolean {
+  return /^https?:\/\//i.test(path) || (path.startsWith("/") && !path.startsWith("//"));
+}
+
 export async function getDocuments(projectId: string): Promise<SignedDoc[]> {
   const supabase = createClient();
   const { data } = await supabase
@@ -241,6 +245,11 @@ export async function getDocuments(projectId: string): Promise<SignedDoc[]> {
   const docs = data ?? [];
   const signed = await Promise.all(
     docs.map(async (d: any) => {
+      // Een link (https://… of /pad op de site) in plaats van een geüpload
+      // bestand, zoals de voorbeeld-PDF's in het demo-dossier.
+      if (isLink(d.storage_path)) {
+        return { id: d.id, name: d.name, type: d.type, url: d.storage_path, created_at: d.created_at };
+      }
       const { data: s } = await supabase.storage
         .from("project-documents")
         .createSignedUrl(d.storage_path, 60 * 60);

@@ -44,7 +44,7 @@ drie testaccounts mét demo-dossier. Je mag het veilig opnieuw draaien.
 > volgorde: `migrations/0001_init.sql` → `0002_rls.sql` → `0003_storage.sql` →
 > `0004_vehicle_photos.sql` → `0005_extra_work.sql` → `0006_workflow_extensions.sql`
 > → `0007_project_types_plate.sql` → `0008_offorte.sql` → `0009_publiceren.sql`
-> → `0010_klantdossier.sql` → `0011_plan_van_aanpak.sql` → `seed.sql`.
+> → `0010_klantdossier.sql` → `0011_plan_van_aanpak.sql` → `0012_foto_rechten.sql` → `seed.sql`.
 
 Testaccounts (wachtwoord voor alle: `JurghTest123!`):
 
@@ -79,13 +79,16 @@ En de medewerkers van JURGH (wachtwoord voor alle: `JurghTest123!`):
 
 ### Demo-klant om te laten zien
 
-`supabase/demo-klant.sql` zet een klantaccount neer met één gevuld dossier
-(Porsche 911, glascoating, in behandeling): tijdlijn, berichten, meerwerk
-waarvan één nog op antwoord wacht, en uren in de admin. Inloggen met
-`demo@jurgh.test` / `JurghDemo2026!` — een eigen wachtwoord, zodat je het
-kunt delen zonder dat van de admin- en medewerkeraccounts weg te geven.
-Opnieuw draaien zet het dossier terug in de beginstand (datums schuiven mee
-met vandaag); foto's blijven staan. Foto's upload je zelf via de admin.
+`supabase/demo-klant.sql` zet een klantaccount neer met één volledig gevuld
+dossier, gebaseerd op het Aston Martin Valhalla-project (PPF Diamant pakket):
+tijdlijn, berichten, meerwerk waarvan één nog op antwoord wacht, uren in de
+admin, en twee voorbeeldlinks — de offerte (📎) en de wasinstructies, allebei
+een PDF uit `public/voorbeeld/`. Autogegevens, autofoto en de voor de klant
+zichtbare foto's komen uit het echte project; dat project zelf blijft
+onaangeroerd. Inloggen met `demo@jurgh.test` / `JurghDemo2026!` — een eigen
+wachtwoord, zodat je het kunt delen zonder dat van de admin- en
+medewerkeraccounts weg te geven. Opnieuw draaien zet het dossier terug in de
+beginstand (datums schuiven mee met vandaag). Vereist migratie 0012.
 
 ### 2. App online zetten via Netlify
 1. Koppel deze GitHub-repo in Netlify ("Import from Git"). Netlify draait zelf
