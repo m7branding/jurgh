@@ -55,7 +55,7 @@ export function ProjectCard({
             </p>
           </div>
           {autoNaam && <p className="line-clamp-1 text-sm text-jurgh-muted">{project.title}</p>}
-          <p className="text-sm text-jurgh-muted">Afspraak: {formatDate(project.appointment_date)}</p>
+          <p className="text-sm text-jurgh-muted">Inleverdatum: {formatDate(project.appointment_date)}</p>
         </div>
       </Link>
 

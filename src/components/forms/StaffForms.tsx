@@ -90,7 +90,7 @@ export function StatusDropdown({
   );
 }
 
-// ---------- Afspraak- en opleverdatum, direct op de projectpagina ----------
+// ---------- Inlever- en opleverdatum, direct op de projectpagina ----------
 export function ProjectDateField({
   projectId,
   field,

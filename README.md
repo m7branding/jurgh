@@ -44,7 +44,7 @@ drie testaccounts mét demo-dossier. Je mag het veilig opnieuw draaien.
 > volgorde: `migrations/0001_init.sql` → `0002_rls.sql` → `0003_storage.sql` →
 > `0004_vehicle_photos.sql` → `0005_extra_work.sql` → `0006_workflow_extensions.sql`
 > → `0007_project_types_plate.sql` → `0008_offorte.sql` → `0009_publiceren.sql`
-> → `0010_klantdossier.sql` → `seed.sql`.
+> → `0010_klantdossier.sql` → `0011_plan_van_aanpak.sql` → `seed.sql`.
 
 Testaccounts (wachtwoord voor alle: `JurghTest123!`):
 
@@ -257,6 +257,12 @@ Urenregistratie en Meerwerk — dat laatste met een rood bolletje zodra de klant
 iets heeft aangevraagd. Een medewerker ziet dezelfde opzet zonder Documenten,
 en begint op Urenregistratie, want daarvoor komt hij.
 
+Het **plan van aanpak** is per dienst een vaste reeks stappen (Admin → Diensten,
+één stap per regel). Op de projectpagina klik je de huidige stap aan; de stappen
+ervoor worden gedempt en de klant ziet dezelfde lijst. Meerwerk dat de klant
+accepteert komt er automatisch achteraan, en de voortgangsbalk volgt de stappen
+zodra er een huidige stap is aangewezen — tot die tijd volgt hij de status.
+
 Bedienen gebeurt waar je kijkt: de status verander je via de badge bovenaan,
 de afspraak- en opleverdatum via een datumkiezer op het veld zelf (verstreken
 datums liggen vast), en de autofoto vervang je met het knopje op de foto.
@@ -276,10 +282,11 @@ zodra de auto binnen is.
 
 | Tab | Inhoud |
 | --- | --- |
-| Plan van aanpak | De link bij deze dienst, plus een eventueel bericht van JURGH |
+| Plan van aanpak | De stappen van de dienst met de huidige stap omlijnd, plus de link naar het volledige plan |
 | Foto's | Gegroepeerd in Voor werk, Tijdens werk en Resultaat |
-| Extra's & Bijzonderheden | Leenauto en transport aanvragen, upsells, meerwerk en opmerkingen. Rood bolletje zodra er meerwerk of een opmerking is |
-| Documenten & links | Offertes en facturen, de webpagina van de dienst en het plan van aanpak |
+| Bijzonderheden | Logboek van meerwerk en opmerkingen. Rood bolletje zodra er iets in staat |
+| Documenten & links | De Offorte-offerte (📎), documenten en de links bij de dienst |
+| Extra's | Rechts in de tabbalk: leenauto, transport en upsells aanvragen, met het tijdstip van elke aanvraag |
 
 ### Aanvragen, niet zelf aanvinken
 
@@ -334,7 +341,7 @@ src/
     offorte-import.ts     # offerte binnenhalen als klant/auto/project
     rdw.ts                # kentekencheck (open data RDW)
 supabase/
-  migrations/             # 0001 schema · 0002 RLS · 0003 storage · … · 0010 klantdossier
+  migrations/             # 0001 schema · 0002 RLS · 0003 storage · … · 0011 plan van aanpak
   seed.mjs                # testaccounts + demo-dossier
 ```
 

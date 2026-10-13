@@ -8,7 +8,10 @@ import {
   getExtraWorkCatalog,
   getPhotos,
   getDocuments,
+  getServiceMilestones,
 } from "@/lib/data";
+import { buildPlanSteps, planProgress } from "@/lib/plan";
+import { PlanSteps, PlanProgress } from "@/components/PlanSteps";
 import { getSessionProfile } from "@/lib/auth";
 import {
   projectTypeLabel,
@@ -29,13 +32,13 @@ import {
 } from "@/lib/constants";
 import {
   StatusBadge,
-  StatusProgress,
   CarThumb,
   Badge,
   Check,
   SectionTitle,
   EmptyState,
   VehicleLine,
+  TabSplit,
 } from "@/components/ui";
 import { Tabs, type TabItem } from "@/components/Tabs";
 import { PublishPanel, PublishLinks } from "@/components/forms/PublishForm";
@@ -77,8 +80,17 @@ export async function ProjectDetail({
   const isAdmin = mode === "admin";
   const isMedewerker = mode === "medewerker";
 
-  const [history, remarks, photos, documents, workLogs, extraWork, extraWorkCatalog, sessionProfile] =
-    await Promise.all([
+  const [
+    history,
+    remarks,
+    photos,
+    documents,
+    workLogs,
+    extraWork,
+    extraWorkCatalog,
+    sessionProfile,
+    milestones,
+  ] = await Promise.all([
       getStatusHistory(projectId),
       getRemarks(projectId),
       getPhotos(projectId),
@@ -87,6 +99,7 @@ export async function ProjectDetail({
       getExtraWork(projectId),
       isAdmin ? getExtraWorkCatalog() : Promise.resolve([] as any[]),
       getSessionProfile(),
+      getServiceMilestones(project.type),
     ]);
 
   const v = project.vehicles;
@@ -95,220 +108,261 @@ export async function ProjectDetail({
   const totalHours = workLogs.reduce((s: number, w: any) => s + Number(w.hours || 0), 0);
   const aangevraagd = (extraWork as any[]).filter((e) => e.status === "aangevraagd").length;
 
-  // ---------------- tabbladen ----------------
+  // ---------------- plan van aanpak ----------------
+  const steps = buildPlanSteps(milestones, extraWork as any[]);
+  const afgerond = ["afgerond", "gefactureerd", "gearchiveerd"].includes(status);
+  const voortgang = planProgress(steps, project.current_step, afgerond);
+
+  // ---------------- tabbladen: lijst links, aanmaken rechts ----------------
   const tabs: TabItem[] = [
     {
       id: "proces",
       label: "Proces",
       content: (
-        <div className="space-y-6">
-          <section className="card p-6">
-            <SectionTitle>Tijdlijn</SectionTitle>
-            <Timeline history={history} remarks={remarks} />
-          </section>
+        <TabSplit
+          list={
+            <>
+              <section className="card p-6">
+                <SectionTitle>Plan van aanpak</SectionTitle>
+                <PlanSteps
+                  steps={steps}
+                  current={project.current_step}
+                  projectId={projectId}
+                  editable={isAdmin}
+                />
+                {isAdmin && steps.length > 0 && (
+                  <p className="mt-3 text-xs text-jurgh-muted">
+                    Klik een stap aan om 'm als huidige te markeren. De klant ziet dezelfde lijst.
+                  </p>
+                )}
+              </section>
 
-          <section className="card p-6">
-            <SectionTitle>Notities &amp; bijzonderheden</SectionTitle>
-            <RemarkForm projectId={projectId} />
-            {remarks.length > 0 && (
-              <ul className="mt-4 space-y-3 border-t border-jurgh-border pt-4">
-                {remarks.map((r: any) => (
-                  <li
-                    key={r.id}
-                    className="rounded-xl border border-jurgh-border bg-jurgh-black/40 p-3"
-                  >
-                    <div className="flex items-center justify-between text-xs text-jurgh-muted">
-                      <span>{formatDateTime(r.created_at)}</span>
-                      {!r.visible_to_customer && <Badge tone="neutral">Intern</Badge>}
-                    </div>
-                    <p className="mt-1 text-sm text-jurgh-text">{r.body}</p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+              <section className="card p-6">
+                <SectionTitle>Tijdlijn</SectionTitle>
+                <Timeline history={history} remarks={remarks} />
+              </section>
+            </>
+          }
+          form={
+            <>
+              <section className="card p-6">
+                <SectionTitle>Notitie toevoegen</SectionTitle>
+                <RemarkForm projectId={projectId} />
+              </section>
 
-          {isAdmin && (
-            <section className="card p-6">
-              <SectionTitle>Leenauto &amp; transport</SectionTitle>
-              <ProjectExtrasForm
-                projectId={projectId}
-                loanerCar={project.loaner_car}
-                loanerCarPlate={project.loaner_car_plate}
-                transport={project.transport}
-              />
-            </section>
-          )}
-
-          {isAdmin && project.internal_notes && (
-            <section className="card p-6">
-              <SectionTitle>Interne notitie</SectionTitle>
-              <p className="whitespace-pre-line text-sm text-jurgh-muted">
-                {project.internal_notes}
-              </p>
-            </section>
-          )}
-        </div>
+              {isAdmin && project.internal_notes && (
+                <section className="card p-6">
+                  <SectionTitle>Interne notitie</SectionTitle>
+                  <p className="whitespace-pre-line text-sm text-jurgh-muted">
+                    {project.internal_notes}
+                  </p>
+                </section>
+              )}
+            </>
+          }
+        />
       ),
     },
     {
       id: "fotos",
       label: "Foto's",
       content: (
-        <div className="space-y-6">
-          <section className="card p-6">
-            <SectionTitle>Foto toevoegen</SectionTitle>
-            <PhotoUploadForm
-              projectId={projectId}
-              extraWorkOptions={(extraWork as any[]).map((e) => ({ id: e.id, title: e.title }))}
-            />
-          </section>
-
-          {photos.length > 0 && (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-              {photos.map((p) => (
-                <figure
-                  key={p.id}
-                  className="overflow-hidden rounded-xl border border-jurgh-border bg-jurgh-black/40"
-                >
-                  {p.url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={p.url}
-                      alt={p.caption ?? p.label}
-                      className="aspect-square w-full object-cover"
-                    />
-                  ) : (
-                    <div className="aspect-square w-full" />
-                  )}
-                  <figcaption className="space-y-1 p-2">
-                    <Badge tone="neutral">{PHOTO_LABEL[p.label as PhotoLabel]}</Badge>
-                    {p.extra_work_id && <Badge tone="amber">Extra werk</Badge>}
-                    {p.caption && <p className="text-xs text-jurgh-muted">{p.caption}</p>}
-                    <PhotoVisibilityToggle
-                      photoId={p.id}
-                      projectId={projectId}
-                      visible={p.visible_to_customer}
-                    />
-                  </figcaption>
-                </figure>
-              ))}
-            </div>
-          )}
-        </div>
+        <TabSplit
+          list={
+            photos.length === 0 ? (
+              <p className="text-sm text-jurgh-muted">Nog geen foto's bij dit project.</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {photos.map((p) => (
+                  <figure
+                    key={p.id}
+                    className="overflow-hidden rounded-xl border border-jurgh-border bg-jurgh-black/40"
+                  >
+                    {p.url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={p.url}
+                        alt={p.caption ?? p.label}
+                        className="aspect-square w-full object-cover"
+                      />
+                    ) : (
+                      <div className="aspect-square w-full" />
+                    )}
+                    <figcaption className="space-y-1 p-2">
+                      <Badge tone="neutral">{PHOTO_LABEL[p.label as PhotoLabel]}</Badge>
+                      {p.extra_work_id && <Badge tone="amber">Extra werk</Badge>}
+                      {p.caption && <p className="text-xs text-jurgh-muted">{p.caption}</p>}
+                      <PhotoVisibilityToggle
+                        photoId={p.id}
+                        projectId={projectId}
+                        visible={p.visible_to_customer}
+                      />
+                    </figcaption>
+                  </figure>
+                ))}
+              </div>
+            )
+          }
+          form={
+            <section className="card p-6">
+              <SectionTitle>Foto toevoegen</SectionTitle>
+              <PhotoUploadForm
+                projectId={projectId}
+                extraWorkOptions={(extraWork as any[]).map((e) => ({ id: e.id, title: e.title }))}
+              />
+            </section>
+          }
+        />
       ),
     },
     {
       id: "uren",
       label: "Urenregistratie",
       content: (
-        <div className="space-y-6">
-          <section className="card p-6">
-            <SectionTitle
-              action={
-                <span className="text-sm text-jurgh-muted">
-                  Totaal:{" "}
-                  <span className="font-semibold text-jurgh-text">{totalHours.toFixed(2)} u</span>
-                </span>
-              }
-            >
-              Uren loggen
-            </SectionTitle>
-            <WorkLogForm projectId={projectId} />
-          </section>
-
-          {workLogs.length > 0 && (
+        <TabSplit
+          list={
+            workLogs.length === 0 ? (
+              <p className="text-sm text-jurgh-muted">Nog geen uren gelogd op dit project.</p>
+            ) : (
+              <section className="card p-6">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-xs uppercase text-jurgh-muted">
+                        <th className="py-2 pr-3">Datum</th>
+                        <th className="py-2 pr-3">Type</th>
+                        <th className="py-2 pr-3">Uren</th>
+                        <th className="py-2 pr-3">Medewerker</th>
+                        <th className="py-2">Omschrijving</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {workLogs.map((w: any) => (
+                        <WorkLogRow
+                          key={w.id}
+                          log={{
+                            id: w.id,
+                            project_id: projectId,
+                            log_date: w.log_date,
+                            work_type: w.work_type,
+                            hours: w.hours,
+                            description: w.description,
+                            employeeName: w.profiles?.full_name ?? "—",
+                          }}
+                          canEdit={isAdmin || w.employee_id === sessionProfile?.id}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )
+          }
+          form={
             <section className="card p-6">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-xs uppercase text-jurgh-muted">
-                      <th className="py-2 pr-3">Datum</th>
-                      <th className="py-2 pr-3">Type</th>
-                      <th className="py-2 pr-3">Uren</th>
-                      <th className="py-2 pr-3">Medewerker</th>
-                      <th className="py-2">Omschrijving</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {workLogs.map((w: any) => (
-                      <WorkLogRow
-                        key={w.id}
-                        log={{
-                          id: w.id,
-                          project_id: projectId,
-                          log_date: w.log_date,
-                          work_type: w.work_type,
-                          hours: w.hours,
-                          description: w.description,
-                          employeeName: w.profiles?.full_name ?? "—",
-                        }}
-                        canEdit={isAdmin || w.employee_id === sessionProfile?.id}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <SectionTitle
+                action={
+                  <span className="text-sm text-jurgh-muted">
+                    Totaal:{" "}
+                    <span className="font-semibold text-jurgh-text">{totalHours.toFixed(2)} u</span>
+                  </span>
+                }
+              >
+                Uren loggen
+              </SectionTitle>
+              <WorkLogForm projectId={projectId} />
             </section>
-          )}
-        </div>
+          }
+        />
       ),
     },
     {
       id: "meerwerk",
-      label: "Meerwerk",
+      label: "Meerwerk & extra's",
       dot: aangevraagd > 0,
       content: (
-        <div className="space-y-6">
-          {isAdmin && (
-            <section className="card p-6">
-              <SectionTitle>Meerwerk toevoegen</SectionTitle>
-              <ExtraWorkForm projectId={projectId} catalog={extraWorkCatalog} />
-            </section>
-          )}
+        <TabSplit
+          list={
+            extraWork.length === 0 ? (
+              <p className="text-sm text-jurgh-muted">Er is nog geen meerwerk vastgelegd.</p>
+            ) : (
+              <ul className="space-y-3">
+                {extraWork.map((e: any) => (
+                  <li key={e.id} className="card p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-jurgh-text">{e.title}</p>
+                        {e.description && (
+                          <p className="mt-0.5 text-sm text-jurgh-muted">{e.description}</p>
+                        )}
+                        <p className="mt-1 text-xs text-jurgh-muted">
+                          {formatPrice(Number(e.price))} (
+                          {PRICING_MODE_LABEL[(e.pricing_mode as PricingMode) || "totaal"]})
+                          {Number(e.estimated_hours) > 0
+                            ? ` · ${Number(e.estimated_hours)} u extra`
+                            : ""}
+                        </p>
+                        <p className="mt-1 text-xs text-jurgh-muted">
+                          {e.status === "aangevraagd" ? "Aangevraagd door klant" : "Toegevoegd"} ·{" "}
+                          {formatDateTime(e.created_at)}
+                        </p>
+                      </div>
+                      <Badge tone={extraWorkTone(e.status as ExtraWorkStatus)}>
+                        {EXTRA_WORK_STATUS_LABEL[e.status as ExtraWorkStatus] ?? e.status}
+                      </Badge>
+                    </div>
 
-          {extraWork.length > 0 && (
-            <ul className="space-y-3">
-              {extraWork.map((e: any) => (
-                <li key={e.id} className="card p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="font-semibold text-jurgh-text">{e.title}</p>
-                      {e.description && (
-                        <p className="mt-0.5 text-sm text-jurgh-muted">{e.description}</p>
+                    {isAdmin && e.status === "concept" && (
+                      <div className="mt-3 border-t border-jurgh-border pt-3">
+                        <ExtraWorkSendButton id={e.id} projectId={projectId} />
+                      </div>
+                    )}
+                    {isAdmin && (
+                      <div className="mt-3 border-t border-jurgh-border pt-3">
+                        <ExtraWorkStatusControl id={e.id} projectId={projectId} current={e.status} />
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )
+          }
+          form={
+            isAdmin ? (
+              <>
+                <section className="card p-6">
+                  <SectionTitle>Meerwerk toevoegen</SectionTitle>
+                  <ExtraWorkForm projectId={projectId} catalog={extraWorkCatalog} />
+                </section>
+                <section className="card p-6">
+                  <SectionTitle>Leenauto &amp; transport</SectionTitle>
+                  <ProjectExtrasForm
+                    projectId={projectId}
+                    loanerCar={project.loaner_car}
+                    loanerCarPlate={project.loaner_car_plate}
+                    transport={project.transport}
+                  />
+                  {(project.loaner_car_requested_at || project.transport_requested_at) && (
+                    <div className="mt-3 space-y-1 border-t border-jurgh-border pt-3 text-xs text-jurgh-muted">
+                      {project.loaner_car_requested_at && (
+                        <p>
+                          Leenauto aangevraagd door klant ·{" "}
+                          {formatDateTime(project.loaner_car_requested_at)}
+                        </p>
                       )}
-                      <p className="mt-1 text-xs text-jurgh-muted">
-                        {formatPrice(Number(e.price))} (
-                        {PRICING_MODE_LABEL[(e.pricing_mode as PricingMode) || "totaal"]})
-                        {Number(e.estimated_hours) > 0
-                          ? ` · ${Number(e.estimated_hours)} u extra`
-                          : ""}
-                      </p>
-                    </div>
-                    <Badge tone={extraWorkTone(e.status as ExtraWorkStatus)}>
-                      {EXTRA_WORK_STATUS_LABEL[e.status as ExtraWorkStatus] ?? e.status}
-                    </Badge>
-                  </div>
-
-                  {isAdmin && e.status === "concept" && (
-                    <div className="mt-3 border-t border-jurgh-border pt-3">
-                      <ExtraWorkSendButton id={e.id} projectId={projectId} />
+                      {project.transport_requested_at && (
+                        <p>
+                          Transport aangevraagd door klant ·{" "}
+                          {formatDateTime(project.transport_requested_at)}
+                        </p>
+                      )}
                     </div>
                   )}
-                  {isAdmin && (
-                    <div className="mt-3 border-t border-jurgh-border pt-3">
-                      <ExtraWorkStatusControl id={e.id} projectId={projectId} current={e.status} />
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {extraWork.length === 0 && !isAdmin && (
-            <p className="text-sm text-jurgh-muted">Er is nog geen meerwerk vastgelegd.</p>
-          )}
-        </div>
+                </section>
+              </>
+            ) : null
+          }
+        />
       ),
     },
   ];
@@ -319,40 +373,45 @@ export async function ProjectDetail({
       id: "documenten",
       label: "Documenten",
       content: (
-        <div className="space-y-6">
-          <section className="card p-6">
-            <SectionTitle>Document uploaden</SectionTitle>
-            <DocumentUploadForm projectId={projectId} />
-          </section>
-
-          {documents.length > 0 && (
-            <ul className="space-y-2">
-              {documents.map((d) => (
-                <li
-                  key={d.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-jurgh-border bg-jurgh-black/40 px-4 py-3"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-jurgh-text">{d.name}</p>
-                    <span className="text-xs text-jurgh-muted">
-                      {DOCUMENT_TYPE_LABEL[d.type as DocumentType]} · {formatDate(d.created_at)}
-                    </span>
-                  </div>
-                  {d.url && (
-                    <a
-                      href={d.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn-ghost px-3 py-1.5"
-                    >
-                      Download
-                    </a>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <TabSplit
+          list={
+            documents.length === 0 ? (
+              <p className="text-sm text-jurgh-muted">Nog geen documenten bij dit project.</p>
+            ) : (
+              <ul className="space-y-2">
+                {documents.map((d) => (
+                  <li
+                    key={d.id}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-jurgh-border bg-jurgh-black/40 px-4 py-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-jurgh-text">{d.name}</p>
+                      <span className="text-xs text-jurgh-muted">
+                        {DOCUMENT_TYPE_LABEL[d.type as DocumentType]} · {formatDate(d.created_at)}
+                      </span>
+                    </div>
+                    {d.url && (
+                      <a
+                        href={d.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-ghost px-3 py-1.5"
+                      >
+                        Download
+                      </a>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )
+          }
+          form={
+            <section className="card p-6">
+              <SectionTitle>Document uploaden</SectionTitle>
+              <DocumentUploadForm projectId={projectId} />
+            </section>
+          }
+        />
       ),
     });
   }
@@ -391,10 +450,14 @@ export async function ProjectDetail({
               )}
               {project.transport && <Badge tone="neutral">🚛 Transport</Badge>}
               {!project.loaner_car && project.loaner_car_requested_at && (
-                <Badge tone="amber">🚗 Leenauto aangevraagd</Badge>
+                <Badge tone="amber">
+                  🚗 Leenauto aangevraagd · {formatDateTime(project.loaner_car_requested_at)}
+                </Badge>
               )}
               {!project.transport && project.transport_requested_at && (
-                <Badge tone="amber">🚛 Transport aangevraagd</Badge>
+                <Badge tone="amber">
+                  🚛 Transport aangevraagd · {formatDateTime(project.transport_requested_at)}
+                </Badge>
               )}
               {project.offorte_proposal_nr && (
                 <Badge tone="neutral">📄 {project.offorte_proposal_nr.trim()}</Badge>
@@ -431,7 +494,7 @@ export async function ProjectDetail({
                   <ProjectDateField
                     projectId={projectId}
                     field="appointment_date"
-                    label="Afspraak"
+                    label="Inleverdatum"
                     value={project.appointment_date}
                   />
                   <ProjectDateField
@@ -443,7 +506,7 @@ export async function ProjectDetail({
                 </>
               ) : (
                 <>
-                  <Field label="Afspraak" value={formatDate(project.appointment_date)} />
+                  <Field label="Inleverdatum" value={formatDate(project.appointment_date)} />
                   <Field
                     label="Verwachte oplevering"
                     value={formatDate(project.expected_delivery_date)}
@@ -467,7 +530,7 @@ export async function ProjectDetail({
             )}
 
             <div className="mt-6">
-              <StatusProgress status={status} />
+              <PlanProgress percent={voortgang} status={status} />
             </div>
 
             <div className="mt-5">

@@ -7,6 +7,8 @@ export type TabItem = {
   label: string;
   /** rood bolletje, bijvoorbeeld bij nieuw meerwerk of een opmerking */
   dot?: boolean;
+  /** naar het eind van de tabbalk geschoven, los van de rest */
+  pushRight?: boolean;
   content: React.ReactNode;
 };
 
@@ -31,6 +33,8 @@ export function Tabs({ tabs, initial }: { tabs: TabItem[]; initial?: string }) {
               aria-selected={isActive}
               onClick={() => setActive(tab.id)}
               className={`relative whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-semibold transition ${
+                tab.pushRight ? "ml-auto" : ""
+              } ${
                 isActive
                   ? "border-jurgh-red text-jurgh-text"
                   : "border-transparent text-jurgh-muted hover:text-jurgh-text"

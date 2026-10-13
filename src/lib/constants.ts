@@ -268,6 +268,8 @@ export function priceInclBtw(value: number | null | undefined): number | null {
 export function formatDate(value: string | null | undefined): string {
   if (!value) return "—";
   return new Intl.DateTimeFormat("nl-NL", {
+    // Netlify draait in UTC; zonder tijdzone stond 14:05 hier als 12:05.
+    timeZone: "Europe/Amsterdam",
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -277,6 +279,8 @@ export function formatDate(value: string | null | undefined): string {
 export function formatDateTime(value: string | null | undefined): string {
   if (!value) return "—";
   return new Intl.DateTimeFormat("nl-NL", {
+    // Netlify draait in UTC; zonder tijdzone stond 14:05 hier als 12:05.
+    timeZone: "Europe/Amsterdam",
     day: "numeric",
     month: "short",
     year: "numeric",

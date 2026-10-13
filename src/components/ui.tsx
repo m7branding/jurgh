@@ -159,6 +159,24 @@ export function StatusProgress({ status }: { status: ProjectStatus }) {
   );
 }
 
+// ---------- Tabblad-indeling: lijst links, aanmaken rechts ----------
+// Op een telefoon staat het formulier bovenaan: daarvoor open je het tabblad.
+export function TabSplit({
+  list,
+  form,
+}: {
+  list: React.ReactNode;
+  form?: React.ReactNode;
+}) {
+  if (!form) return <div className="space-y-6">{list}</div>;
+  return (
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="order-2 min-w-0 space-y-6 lg:order-1">{list}</div>
+      <div className="order-1 space-y-6 lg:order-2">{form}</div>
+    </div>
+  );
+}
+
 // ---------- Checkmark ----------
 export function Check({ className = "" }: { className?: string }) {
   return (

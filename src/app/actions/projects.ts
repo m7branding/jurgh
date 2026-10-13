@@ -199,6 +199,20 @@ export async function updateProjectExtras(formData: FormData) {
   refresh(projectId);
 }
 
+// ---------- Huidige stap in het plan van aanpak (alleen admin) ----------
+export async function setCurrentStep(formData: FormData) {
+  await adminOnly();
+  const supabase = createClient();
+  const projectId = String(formData.get("project_id"));
+  const raw = String(formData.get("step") ?? "");
+  const step = raw === "" ? null : Number(raw);
+  if (step != null && (!Number.isInteger(step) || step < 0)) return;
+
+  const { error } = await supabase.from("projects").update({ current_step: step }).eq("id", projectId);
+  if (error) throw new Error(error.message);
+  refresh(projectId);
+}
+
 // ---------- Afspraak- en opleverdatum (alleen admin) ----------
 // Een datum die al verstreken is, ligt vast: dat is geschiedenis, geen planning.
 // De controle staat hier en niet alleen in het formulier, zodat een oud

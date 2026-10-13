@@ -6,11 +6,13 @@ import {
   getExtraWork,
   getExtraWorkCatalog,
   getServiceLink,
+  getServiceMilestones,
   vehicleTitle,
 } from "@/lib/data";
+import { buildPlanSteps, planProgress } from "@/lib/plan";
+import { PlanSteps, PlanProgress } from "@/components/PlanSteps";
 import {
   projectTypeLabel,
-  STATUS_LABEL,
   PHOTO_GROUPS,
   PHOTO_LABEL,
   DOCUMENT_TYPE_LABEL,
@@ -32,7 +34,6 @@ import {
 import {
   CarThumb,
   StatusBadge,
-  StatusProgress,
   Badge,
   EmptyState,
   VehicleLine,
@@ -50,14 +51,16 @@ export async function KlantDossier({ projectId }: { projectId: string }) {
   const project = await getProject(projectId);
   if (!project) return <EmptyState title="Dit dossier is niet (meer) beschikbaar" />;
 
-  const [photos, documents, remarks, extraWork, catalog, serviceLink] = await Promise.all([
-    getPhotos(projectId),
-    getDocuments(projectId),
-    getRemarks(projectId),
-    getExtraWork(projectId),
-    getExtraWorkCatalog(),
-    getServiceLink(project.type),
-  ]);
+  const [photos, documents, remarks, extraWork, catalog, serviceLink, milestones] =
+    await Promise.all([
+      getPhotos(projectId),
+      getDocuments(projectId),
+      getRemarks(projectId),
+      getExtraWork(projectId),
+      getExtraWorkCatalog(),
+      getServiceLink(project.type),
+      getServiceMilestones(project.type),
+    ]);
 
   const v = project.vehicles;
   const c = project.customers;
@@ -76,9 +79,14 @@ export async function KlantDossier({ projectId }: { projectId: string }) {
   for (const p of photos) if (p.extra_work_id) fotoBijMeerwerk.set(p.extra_work_id, p);
 
   const aangevraagdeTitels = new Set(meerwerk.map((e) => e.title));
+  const aangevraagdeUpsells = meerwerk.filter((e) => e.status === "aangevraagd");
   const upsells = (catalog as any[]).filter((item) => !aangevraagdeTitels.has(item.title));
 
   const lopend = projectLopend(status);
+
+  // plan van aanpak: stappen van de dienst + geaccepteerd meerwerk
+  const steps = buildPlanSteps(milestones, meerwerk);
+  const voortgang = planProgress(steps, project.current_step, !lopend);
   const toonLeenauto = lopend && !project.loaner_car && !project.loaner_car_requested_at;
   const toonTransport = lopend && !project.transport && !project.transport_requested_at;
 
@@ -88,30 +96,25 @@ export async function KlantDossier({ projectId }: { projectId: string }) {
       id: "plan",
       label: "Plan van aanpak",
       content: (
-        <div className="card space-y-3 p-6">
-          <h2 className="text-lg font-bold text-jurgh-text">
-            {projectTypeLabel(project.type)}
-          </h2>
-          {serviceLink?.plan_url ? (
-            <>
-              <p className="text-sm text-jurgh-muted">
-                Hierin lees je precies welke stappen we zetten en wat je van ons mag verwachten.
-              </p>
-              <a
-                href={serviceLink.plan_url}
-                target="_blank"
-                rel="noreferrer"
-                className="btn-primary inline-flex"
-              >
-                Bekijk het plan van aanpak
-              </a>
-            </>
-          ) : (
-            <p className="text-sm text-jurgh-muted">
-              Het plan van aanpak voor deze behandeling staat nog niet klaar. Je vindt het hier
-              zodra het beschikbaar is.
-            </p>
+        <div className="space-y-6">
+          <section className="card p-6">
+            <h2 className="mb-4 text-lg font-bold text-jurgh-text">
+              {projectTypeLabel(project.type)}
+            </h2>
+            <PlanSteps steps={steps} current={project.current_step} />
+          </section>
+
+          {serviceLink?.plan_url && (
+            <a
+              href={serviceLink.plan_url}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-ghost inline-flex"
+            >
+              Het volledige plan van aanpak lezen ↗
+            </a>
           )}
+
           {project.customer_notes && (
             <div className="rounded-xl border border-jurgh-border bg-jurgh-black/30 p-4">
               <p className="mb-1 text-xs uppercase tracking-wide text-jurgh-muted">
@@ -177,58 +180,11 @@ export async function KlantDossier({ projectId }: { projectId: string }) {
       ),
     },
     {
-      id: "extras",
-      label: "Extra's & Bijzonderheden",
+      id: "bijzonderheden",
+      label: "Bijzonderheden",
       dot: heeftNieuws,
       content: (
         <div className="space-y-6">
-          {/* ---- aanvragen ---- */}
-          {(toonLeenauto || toonTransport) && (
-            <section className="card space-y-3 p-6">
-              <h3 className="font-semibold text-jurgh-text">Iets nodig tijdens de behandeling?</h3>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                {toonLeenauto && (
-                  <RequestOptionButton
-                    projectId={projectId}
-                    kind="leenauto"
-                    label="🚗 Leenauto aanvragen"
-                  />
-                )}
-                {toonTransport && (
-                  <RequestOptionButton
-                    projectId={projectId}
-                    kind="transport"
-                    label="🚛 Transport aanvragen"
-                  />
-                )}
-              </div>
-              <p className="text-xs text-jurgh-muted">
-                We nemen contact op om het af te stemmen; je aanvraag is nog geen bevestiging.
-              </p>
-            </section>
-          )}
-
-          {(project.loaner_car ||
-            project.transport ||
-            project.loaner_car_requested_at ||
-            project.transport_requested_at) && (
-            <div className="flex flex-wrap gap-2">
-              {project.loaner_car && (
-                <Badge tone="green">
-                  🚗 Leenauto geregeld
-                  {project.loaner_car_plate ? ` · ${project.loaner_car_plate}` : ""}
-                </Badge>
-              )}
-              {!project.loaner_car && project.loaner_car_requested_at && (
-                <Badge tone="amber">🚗 Leenauto aangevraagd</Badge>
-              )}
-              {project.transport && <Badge tone="green">🚛 Transport geregeld</Badge>}
-              {!project.transport && project.transport_requested_at && (
-                <Badge tone="amber">🚛 Transport aangevraagd</Badge>
-              )}
-            </div>
-          )}
-
           {/* ---- meerwerk ---- */}
           {meerwerk.length > 0 && (
             <section className="space-y-3">
@@ -264,6 +220,10 @@ export async function KlantDossier({ projectId }: { projectId: string }) {
                               {inclBtw ? ", incl. btw" : ", excl. btw"})
                             </span>
                           </p>
+                          <p className="text-xs text-jurgh-muted">
+                            {e.status === "aangevraagd" ? "Door jou aangevraagd" : "Toegevoegd"} ·{" "}
+                            {formatDateTime(e.created_at)}
+                          </p>
                           {e.status === "voorgesteld" && (
                             <ExtraWorkRespond id={e.id} projectId={projectId} />
                           )}
@@ -273,6 +233,205 @@ export async function KlantDossier({ projectId }: { projectId: string }) {
                   );
                 })}
               </ul>
+            </section>
+          )}
+
+          {/* ---- opmerkingen ---- */}
+          {opmerkingen.length > 0 && (
+            <section className="space-y-3">
+              <h3 className="font-semibold text-jurgh-text">Opmerkingen</h3>
+              <ul className="space-y-2">
+                {opmerkingen.map((r) => (
+                  <li
+                    key={r.id}
+                    className="rounded-xl border border-jurgh-border bg-jurgh-black/30 p-4"
+                  >
+                    <p className="text-sm text-jurgh-text">{r.body}</p>
+                    <p className="mt-1 text-xs text-jurgh-muted">{formatDateTime(r.created_at)}</p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {!heeftNieuws && (
+            <p className="text-sm text-jurgh-muted">
+              Er zijn nog geen bijzonderheden. Ontdekken we iets tijdens de behandeling, dan lees
+              je het hier.
+            </p>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: "documenten",
+      label: "Documenten & links",
+      content: (
+        <div className="space-y-6">
+          {/* ---- de offerte uit Offorte ---- */}
+          {project.offorte_proposal_url && (
+            <a
+              href={project.offorte_proposal_url}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-3 rounded-xl border border-jurgh-border bg-jurgh-card px-4 py-3 transition hover:border-jurgh-red/50"
+            >
+              <span aria-hidden className="text-xl">📎</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-jurgh-text">Jouw offerte</span>
+                <span className="block truncate text-xs text-jurgh-muted">
+                  {project.offorte_proposal_nr?.trim() ?? "Offerte"} · bekijken of als PDF
+                  downloaden
+                </span>
+              </span>
+              <span aria-hidden className="text-jurgh-muted">↗</span>
+            </a>
+          )}
+
+          {documents.length > 0 && (
+            <section className="space-y-3">
+              <h3 className="font-semibold text-jurgh-text">Documenten</h3>
+              <ul className="space-y-2">
+                {documents.map((d) => (
+                  <li
+                    key={d.id}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-jurgh-border bg-jurgh-black/30 px-4 py-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-jurgh-text">{d.name}</p>
+                      <span className="text-xs text-jurgh-muted">
+                        {DOCUMENT_TYPE_LABEL[d.type as DocumentType]} · {formatDate(d.created_at)}
+                      </span>
+                    </div>
+                    {d.url && (
+                      <a
+                        href={d.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn-ghost px-3 py-1.5"
+                      >
+                        Openen
+                      </a>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {(serviceLink?.website_url || serviceLink?.plan_url) && (
+            <section className="space-y-3">
+              <h3 className="font-semibold text-jurgh-text">Over deze behandeling</h3>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                {serviceLink?.website_url && (
+                  <a
+                    href={serviceLink.website_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn-ghost"
+                  >
+                    Meer over {projectTypeLabel(project.type)}
+                  </a>
+                )}
+                {serviceLink?.plan_url && (
+                  <a
+                    href={serviceLink.plan_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn-ghost"
+                  >
+                    Plan van aanpak
+                  </a>
+                )}
+              </div>
+            </section>
+          )}
+
+          {!project.offorte_proposal_url &&
+            documents.length === 0 &&
+            !serviceLink?.website_url &&
+            !serviceLink?.plan_url && (
+              <p className="text-sm text-jurgh-muted">
+                Hier verschijnen je offerte, factuur en certificaten zodra ze klaarstaan.
+              </p>
+            )}
+        </div>
+      ),
+    },
+    {
+      id: "extras",
+      label: "Extra's",
+      // los van het dossier: dit is waar de klant zelf iets kan aanvragen
+      pushRight: true,
+      content: (
+        <div className="space-y-6">
+          {/* ---- wat de klant al heeft aangevraagd ---- */}
+          {(project.loaner_car ||
+            project.transport ||
+            project.loaner_car_requested_at ||
+            project.transport_requested_at ||
+            aangevraagdeUpsells.length > 0) && (
+            <section className="space-y-3">
+              <h3 className="font-semibold text-jurgh-text">Jouw aanvragen</h3>
+              <ul className="space-y-2">
+                {project.loaner_car ? (
+                  <AanvraagRegel
+                    titel="🚗 Leenauto geregeld"
+                    detail={project.loaner_car_plate ?? undefined}
+                    geregeld
+                  />
+                ) : (
+                  project.loaner_car_requested_at && (
+                    <AanvraagRegel
+                      titel="🚗 Leenauto aangevraagd"
+                      detail={formatDateTime(project.loaner_car_requested_at)}
+                    />
+                  )
+                )}
+                {project.transport ? (
+                  <AanvraagRegel titel="🚛 Transport geregeld" geregeld />
+                ) : (
+                  project.transport_requested_at && (
+                    <AanvraagRegel
+                      titel="🚛 Transport aangevraagd"
+                      detail={formatDateTime(project.transport_requested_at)}
+                    />
+                  )
+                )}
+                {aangevraagdeUpsells.map((e) => (
+                  <AanvraagRegel
+                    key={e.id}
+                    titel={`${e.title} aangevraagd`}
+                    detail={formatDateTime(e.created_at)}
+                  />
+                ))}
+              </ul>
+              <p className="text-xs text-jurgh-muted">
+                We nemen contact op om het af te stemmen; een aanvraag is nog geen bevestiging.
+              </p>
+            </section>
+          )}
+
+          {/* ---- nieuw aanvragen ---- */}
+          {(toonLeenauto || toonTransport) && (
+            <section className="card space-y-3 p-6">
+              <h3 className="font-semibold text-jurgh-text">Iets nodig tijdens de behandeling?</h3>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                {toonLeenauto && (
+                  <RequestOptionButton
+                    projectId={projectId}
+                    kind="leenauto"
+                    label="🚗 Leenauto aanvragen"
+                  />
+                )}
+                {toonTransport && (
+                  <RequestOptionButton
+                    projectId={projectId}
+                    kind="transport"
+                    label="🚛 Transport aanvragen"
+                  />
+                )}
+              </div>
             </section>
           )}
 
@@ -303,93 +462,16 @@ export async function KlantDossier({ projectId }: { projectId: string }) {
             </section>
           )}
 
-          {/* ---- opmerkingen ---- */}
-          {opmerkingen.length > 0 && (
-            <section className="space-y-3">
-              <h3 className="font-semibold text-jurgh-text">Bijzonderheden</h3>
-              <ul className="space-y-2">
-                {opmerkingen.map((r) => (
-                  <li key={r.id} className="rounded-xl border border-jurgh-border bg-jurgh-black/30 p-4">
-                    <p className="text-sm text-jurgh-text">{r.body}</p>
-                    <p className="mt-1 text-xs text-jurgh-muted">{formatDateTime(r.created_at)}</p>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {/* helemaal niets te melden: dan toch één zin */}
           {!toonLeenauto &&
             !toonTransport &&
-            meerwerk.length === 0 &&
-            opmerkingen.length === 0 &&
-            (!lopend || upsells.length === 0) && (
-              <p className="text-sm text-jurgh-muted">
-                Er staan op dit moment geen extra's of bijzonderheden open.
-              </p>
+            (!lopend || upsells.length === 0) &&
+            !project.loaner_car &&
+            !project.transport &&
+            !project.loaner_car_requested_at &&
+            !project.transport_requested_at &&
+            aangevraagdeUpsells.length === 0 && (
+              <p className="text-sm text-jurgh-muted">Er valt op dit moment niets aan te vragen.</p>
             )}
-        </div>
-      ),
-    },
-    {
-      id: "documenten",
-      label: "Documenten & links",
-      content: (
-        <div className="space-y-6">
-          {documents.length > 0 && (
-            <section className="space-y-3">
-              <h3 className="font-semibold text-jurgh-text">Documenten</h3>
-              <ul className="space-y-2">
-                {documents.map((d) => (
-                  <li
-                    key={d.id}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-jurgh-border bg-jurgh-black/30 px-4 py-3"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-jurgh-text">{d.name}</p>
-                      <span className="text-xs text-jurgh-muted">
-                        {DOCUMENT_TYPE_LABEL[d.type as DocumentType]} · {formatDate(d.created_at)}
-                      </span>
-                    </div>
-                    {d.url && (
-                      <a href={d.url} target="_blank" rel="noreferrer" className="btn-ghost px-3 py-1.5">
-                        Openen
-                      </a>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {(serviceLink?.website_url || serviceLink?.plan_url) && (
-            <section className="space-y-3">
-              <h3 className="font-semibold text-jurgh-text">Over deze behandeling</h3>
-              <div className="flex flex-col gap-2 sm:flex-row">
-              {serviceLink?.website_url && (
-                <a
-                  href={serviceLink.website_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn-ghost"
-                >
-                  Meer over {projectTypeLabel(project.type)}
-                </a>
-              )}
-                {serviceLink?.plan_url && (
-                  <a href={serviceLink.plan_url} target="_blank" rel="noreferrer" className="btn-ghost">
-                    Plan van aanpak
-                  </a>
-                )}
-              </div>
-            </section>
-          )}
-
-          {documents.length === 0 && !serviceLink?.website_url && !serviceLink?.plan_url && (
-            <p className="text-sm text-jurgh-muted">
-              Hier verschijnen je offerte, factuur en certificaten zodra ze klaarstaan.
-            </p>
-          )}
         </div>
       ),
     },
@@ -423,12 +505,12 @@ export async function KlantDossier({ projectId }: { projectId: string }) {
               </div>
             </div>
 
-            <StatusProgress status={status} />
+            <PlanProgress percent={voortgang} status={status} />
 
             {/* tijdlijn: de datum die er nú toe doet, staat vooraan */}
             <div className="grid gap-3 sm:grid-cols-2">
               <DatumVak
-                label="Afspraak"
+                label="Inleverdatum"
                 value={formatDate(project.appointment_date)}
                 uitgelicht={afspraakAanstaand(status)}
               />
@@ -474,5 +556,28 @@ function DatumVak({
         {value}
       </p>
     </div>
+  );
+}
+
+function AanvraagRegel({
+  titel,
+  detail,
+  geregeld = false,
+}: {
+  titel: string;
+  detail?: string;
+  geregeld?: boolean;
+}) {
+  return (
+    <li
+      className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-3 ${
+        geregeld
+          ? "border-jurgh-green/30 bg-jurgh-green/10"
+          : "border-jurgh-gold/30 bg-jurgh-gold/10"
+      }`}
+    >
+      <span className="text-sm font-medium text-jurgh-text">{titel}</span>
+      {detail && <span className="text-xs text-jurgh-muted">{detail}</span>}
+    </li>
   );
 }

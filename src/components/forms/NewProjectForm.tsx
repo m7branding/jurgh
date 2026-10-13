@@ -330,7 +330,7 @@ export function NewProjectForm({ customers }: { customers: CustomerOption[] }) {
             <input name="price_note" className="input" placeholder="bijv. op nacalculatie / vaste pakketprijs" />
           </div>
           <div>
-            <label className="label">Afspraakdatum</label>
+            <label className="label">Inleverdatum</label>
             <input name="appointment_date" type="date" className="input" />
           </div>
           <div>
