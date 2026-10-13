@@ -53,8 +53,8 @@ export type Project = {
   // klant heeft het aangevraagd; het vinkje erboven zet de admin
   loaner_car_requested_at: string | null;
   transport_requested_at: string | null;
-  // index in het plan van aanpak (stappen van de dienst + geaccepteerd meerwerk)
-  current_step: number | null;
+  // eigen plan van aanpak voor dit project; leeg = de standaardtekst van de dienst
+  plan_text: string | null;
   customers?: Customer;
   vehicles?: Vehicle;
 };

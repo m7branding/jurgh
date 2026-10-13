@@ -56,7 +56,7 @@ export async function getWorkLogs(projectId: string) {
   return data ?? [];
 }
 
-/** Links per dienst (webpagina + plan van aanpak), één rij per projecttype. */
+/** Per dienst: webpagina, plan van aanpak (tekst + document), één rij per projecttype. */
 export async function getServiceLink(projectType: string) {
   const supabase = createClient();
   const { data } = await supabase
@@ -64,28 +64,12 @@ export async function getServiceLink(projectType: string) {
     .select("*")
     .eq("project_type", projectType)
     .maybeSingle();
-  return data as { project_type: string; website_url: string | null; plan_url: string | null } | null;
-}
-
-/** Stappen van het plan van aanpak voor één dienst, op volgorde. */
-export async function getServiceMilestones(projectType: string) {
-  const supabase = createClient();
-  const { data } = await supabase
-    .from("service_milestones")
-    .select("id, title, position")
-    .eq("project_type", projectType)
-    .order("position");
-  return (data ?? []) as { id: string; title: string; position: number }[];
-}
-
-export async function listAllServiceMilestones() {
-  const supabase = createClient();
-  const { data } = await supabase
-    .from("service_milestones")
-    .select("project_type, title, position")
-    .order("project_type")
-    .order("position");
-  return (data ?? []) as { project_type: string; title: string; position: number }[];
+  return data as {
+    project_type: string;
+    website_url: string | null;
+    plan_url: string | null;
+    plan_text: string | null;
+  } | null;
 }
 
 export async function listServiceLinks() {

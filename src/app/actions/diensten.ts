@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
+import { normaliseerPlan } from "@/lib/plan";
 
 /**
  * Links per dienst: één keer invullen, elk project van dat type toont ze.
@@ -31,32 +32,22 @@ export async function updateServiceLink(formData: FormData) {
 }
 
 /**
- * Stappen van het plan van aanpak voor één dienst. Eén stap per regel; de
- * volgorde van de regels is de volgorde van de stappen.
+ * Standaardtekst van het plan van aanpak voor één dienst. Eén stap per regel,
+ * "Titel — uitleg". Projecten zonder eigen tekst tonen deze aan de klant.
  */
-export async function updateServiceMilestones(formData: FormData) {
+export async function updateServicePlan(formData: FormData) {
   const profile = await getSessionProfile();
   if (!profile || profile.role !== "admin") throw new Error("Alleen admin");
 
   const supabase = createClient();
   const projectType = String(formData.get("project_type") || "");
-  const stappen = String(formData.get("milestones") || "")
-    .split("\n")
-    .map((regel) => regel.trim())
-    .filter(Boolean);
+  const tekst = normaliseerPlan(String(formData.get("plan_text") || ""));
 
-  const { error: delError } = await supabase
-    .from("service_milestones")
-    .delete()
+  const { error } = await supabase
+    .from("service_links")
+    .update({ plan_text: tekst || null, updated_at: new Date().toISOString() })
     .eq("project_type", projectType);
-  if (delError) throw new Error(delError.message);
-
-  if (stappen.length > 0) {
-    const { error } = await supabase.from("service_milestones").insert(
-      stappen.map((title, i) => ({ project_type: projectType, position: i + 1, title }))
-    );
-    if (error) throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
 
   revalidatePath("/admin/diensten");
 }

@@ -8,10 +8,11 @@ import {
   getExtraWorkCatalog,
   getPhotos,
   getDocuments,
-  getServiceMilestones,
+  getServiceLink,
 } from "@/lib/data";
-import { buildPlanSteps, planProgress } from "@/lib/plan";
-import { PlanSteps, PlanProgress } from "@/components/PlanSteps";
+import { planTekst } from "@/lib/plan";
+import { PlanVanAanpak } from "@/components/PlanVanAanpak";
+import { updateProjectPlan } from "@/app/actions/projects";
 import { getSessionProfile } from "@/lib/auth";
 import {
   projectTypeLabel,
@@ -39,6 +40,7 @@ import {
   EmptyState,
   VehicleLine,
   TabSplit,
+  StatusProgress,
 } from "@/components/ui";
 import { Tabs, type TabItem } from "@/components/Tabs";
 import { PublishPanel, PublishLinks } from "@/components/forms/PublishForm";
@@ -89,7 +91,7 @@ export async function ProjectDetail({
     extraWork,
     extraWorkCatalog,
     sessionProfile,
-    milestones,
+    serviceLink,
   ] = await Promise.all([
       getStatusHistory(projectId),
       getRemarks(projectId),
@@ -99,7 +101,7 @@ export async function ProjectDetail({
       getExtraWork(projectId),
       isAdmin ? getExtraWorkCatalog() : Promise.resolve([] as any[]),
       getSessionProfile(),
-      getServiceMilestones(project.type),
+      isAdmin ? getServiceLink(project.type) : Promise.resolve(null),
     ]);
 
   const v = project.vehicles;
@@ -107,11 +109,6 @@ export async function ProjectDetail({
   const status = project.status as ProjectStatus;
   const totalHours = workLogs.reduce((s: number, w: any) => s + Number(w.hours || 0), 0);
   const aangevraagd = (extraWork as any[]).filter((e) => e.status === "aangevraagd").length;
-
-  // ---------------- plan van aanpak ----------------
-  const steps = buildPlanSteps(milestones, extraWork as any[]);
-  const afgerond = ["afgerond", "gefactureerd", "gearchiveerd"].includes(status);
-  const voortgang = planProgress(steps, project.current_step, afgerond);
 
   // ---------------- tabbladen: lijst links, aanmaken rechts ----------------
   const tabs: TabItem[] = [
@@ -121,27 +118,10 @@ export async function ProjectDetail({
       content: (
         <TabSplit
           list={
-            <>
-              <section className="card p-6">
-                <SectionTitle>Plan van aanpak</SectionTitle>
-                <PlanSteps
-                  steps={steps}
-                  current={project.current_step}
-                  projectId={projectId}
-                  editable={isAdmin}
-                />
-                {isAdmin && steps.length > 0 && (
-                  <p className="mt-3 text-xs text-jurgh-muted">
-                    Klik een stap aan om 'm als huidige te markeren. De klant ziet dezelfde lijst.
-                  </p>
-                )}
-              </section>
-
-              <section className="card p-6">
-                <SectionTitle>Tijdlijn</SectionTitle>
-                <Timeline history={history} remarks={remarks} />
-              </section>
-            </>
+            <section className="card p-6">
+              <SectionTitle>Tijdlijn</SectionTitle>
+              <Timeline history={history} remarks={remarks} />
+            </section>
           }
           form={
             <>
@@ -367,6 +347,72 @@ export async function ProjectDetail({
     },
   ];
 
+  // Plan van aanpak: informatie voor de klant, alleen de admin past het aan.
+  if (isAdmin) {
+    const dienstTekst = serviceLink?.plan_text ?? "";
+    const eigenTekst = project.plan_text?.trim() ? project.plan_text : null;
+    tabs.push({
+      id: "plan",
+      label: "Plan van aanpak",
+      content: (
+        <TabSplit
+          list={
+            <section className="card p-6">
+              <SectionTitle
+                action={
+                  <Badge tone={eigenTekst ? "amber" : "neutral"}>
+                    {eigenTekst ? "Aangepast voor dit project" : "Standaard van de dienst"}
+                  </Badge>
+                }
+              >
+                Zo ziet de klant het
+              </SectionTitle>
+              <PlanVanAanpak text={planTekst(eigenTekst, dienstTekst)} />
+            </section>
+          }
+          form={
+            <section className="card p-6">
+              <SectionTitle>Aanpassen voor dit project</SectionTitle>
+              {/* key: na opslaan of herstellen staat de opgeslagen tekst weer in het vak */}
+              <form
+                key={planTekst(eigenTekst, dienstTekst)}
+                action={updateProjectPlan}
+                className="space-y-3"
+              >
+                <input type="hidden" name="project_id" value={projectId} />
+                <textarea
+                  name="plan_text"
+                  rows={12}
+                  defaultValue={planTekst(eigenTekst, dienstTekst)}
+                  className="input text-sm leading-relaxed"
+                />
+                <p className="text-xs text-jurgh-muted">
+                  Eén stap per regel: titel, dan een streepje, dan de uitleg. De standaardtekst
+                  pas je aan onder <Link href="/admin/diensten" className="underline">Diensten</Link>.
+                </p>
+                <div className="flex flex-wrap justify-end gap-2">
+                  {eigenTekst && (
+                    <button
+                      type="submit"
+                      name="herstel"
+                      value="1"
+                      className="btn-ghost px-4 py-2 text-sm"
+                    >
+                      Standaard herstellen
+                    </button>
+                  )}
+                  <button type="submit" className="btn-primary px-4 py-2 text-sm">
+                    Opslaan
+                  </button>
+                </div>
+              </form>
+            </section>
+          }
+        />
+      ),
+    });
+  }
+
   // Documenten zijn sinds de rechtenaanscherping admin-only.
   if (isAdmin) {
     tabs.splice(2, 0, {
@@ -530,7 +576,7 @@ export async function ProjectDetail({
             )}
 
             <div className="mt-6">
-              <PlanProgress percent={voortgang} status={status} />
+              <StatusProgress status={status} />
             </div>
 
             <div className="mt-5">

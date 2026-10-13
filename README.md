@@ -253,15 +253,16 @@ op `false` kan.
 
 Beide projectpagina's werken met tabbladen. De **adminpagina** heeft Proces
 (tijdlijn, notities, leenauto en transport), Foto's, Documenten,
-Urenregistratie en Meerwerk — dat laatste met een rood bolletje zodra de klant
-iets heeft aangevraagd. Een medewerker ziet dezelfde opzet zonder Documenten,
+Urenregistratie, Meerwerk & extra's — met een rood bolletje zodra de klant
+iets heeft aangevraagd — en Plan van aanpak. Een medewerker ziet dezelfde opzet zonder Documenten,
 en begint op Urenregistratie, want daarvoor komt hij.
 
-Het **plan van aanpak** is per dienst een vaste reeks stappen (Admin → Diensten,
-één stap per regel). Op de projectpagina klik je de huidige stap aan; de stappen
-ervoor worden gedempt en de klant ziet dezelfde lijst. Meerwerk dat de klant
-accepteert komt er automatisch achteraan, en de voortgangsbalk volgt de stappen
-zodra er een huidige stap is aangewezen — tot die tijd volgt hij de status.
+Het **plan van aanpak** is puur informatie voor de klant: een stappenplan van
+de behandeling in tekst, zonder huidige stap of koppeling met de voortgang (de
+voortgangsbalk volgt de status). Per dienst staat er een standaardtekst onder
+Admin → Diensten, één stap per regel als `Titel — uitleg`. Op de adminpagina
+van een project staat een tab Plan van aanpak waar je de tekst voor dat ene
+project aanpast; "Standaard herstellen" zet hem terug op die van de dienst.
 
 Bedienen gebeurt waar je kijkt: de status verander je via de badge bovenaan,
 de afspraak- en opleverdatum via een datumkiezer op het veld zelf (verstreken
@@ -282,7 +283,7 @@ zodra de auto binnen is.
 
 | Tab | Inhoud |
 | --- | --- |
-| Plan van aanpak | De stappen van de dienst met de huidige stap omlijnd, plus de link naar het volledige plan |
+| Plan van aanpak | Het stappenplan van de behandeling als tekst (eigen versie van het project, anders die van de dienst), plus de link naar het volledige plan |
 | Foto's | Gegroepeerd in Voor werk, Tijdens werk en Resultaat |
 | Bijzonderheden | Logboek van meerwerk en opmerkingen. Rood bolletje zodra er iets in staat |
 | Documenten & links | De Offorte-offerte (📎), documenten en de links bij de dienst |

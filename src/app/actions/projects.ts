@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
 import { normalizePlate } from "@/lib/types";
+import { normaliseerPlan } from "@/lib/plan";
 import type {
   ProjectStatus,
   PhotoLabel,
@@ -199,16 +200,33 @@ export async function updateProjectExtras(formData: FormData) {
   refresh(projectId);
 }
 
-// ---------- Huidige stap in het plan van aanpak (alleen admin) ----------
-export async function setCurrentStep(formData: FormData) {
+// ---------- Plan van aanpak per project (alleen admin) ----------
+// Leeg, "standaard herstellen" of gelijk aan de tekst van de dienst: dan
+// bewaren we niets, zodat het project de standaardtekst blijft volgen.
+export async function updateProjectPlan(formData: FormData) {
   await adminOnly();
   const supabase = createClient();
   const projectId = String(formData.get("project_id"));
-  const raw = String(formData.get("step") ?? "");
-  const step = raw === "" ? null : Number(raw);
-  if (step != null && (!Number.isInteger(step) || step < 0)) return;
+  const herstel = formData.get("herstel") === "1";
+  const tekst = herstel ? "" : normaliseerPlan(String(formData.get("plan_text") || ""));
 
-  const { error } = await supabase.from("projects").update({ current_step: step }).eq("id", projectId);
+  const { data: project } = await supabase
+    .from("projects")
+    .select("type")
+    .eq("id", projectId)
+    .maybeSingle();
+  if (!project) throw new Error("Project niet gevonden");
+  const { data: dienstRij } = await supabase
+    .from("service_links")
+    .select("plan_text")
+    .eq("project_type", project.type)
+    .maybeSingle();
+  const dienst = normaliseerPlan(dienstRij?.plan_text ?? "");
+
+  const { error } = await supabase
+    .from("projects")
+    .update({ plan_text: tekst && tekst !== dienst ? tekst : null })
+    .eq("id", projectId);
   if (error) throw new Error(error.message);
   refresh(projectId);
 }

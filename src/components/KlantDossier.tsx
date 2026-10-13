@@ -6,11 +6,10 @@ import {
   getExtraWork,
   getExtraWorkCatalog,
   getServiceLink,
-  getServiceMilestones,
   vehicleTitle,
 } from "@/lib/data";
-import { buildPlanSteps, planProgress } from "@/lib/plan";
-import { PlanSteps, PlanProgress } from "@/components/PlanSteps";
+import { planTekst } from "@/lib/plan";
+import { PlanVanAanpak } from "@/components/PlanVanAanpak";
 import {
   projectTypeLabel,
   PHOTO_GROUPS,
@@ -37,6 +36,7 @@ import {
   Badge,
   EmptyState,
   VehicleLine,
+  StatusProgress,
 } from "@/components/ui";
 import { Tabs, type TabItem } from "@/components/Tabs";
 import { ExtraWorkRespond } from "@/components/forms/StaffForms";
@@ -51,16 +51,14 @@ export async function KlantDossier({ projectId }: { projectId: string }) {
   const project = await getProject(projectId);
   if (!project) return <EmptyState title="Dit dossier is niet (meer) beschikbaar" />;
 
-  const [photos, documents, remarks, extraWork, catalog, serviceLink, milestones] =
-    await Promise.all([
-      getPhotos(projectId),
-      getDocuments(projectId),
-      getRemarks(projectId),
-      getExtraWork(projectId),
-      getExtraWorkCatalog(),
-      getServiceLink(project.type),
-      getServiceMilestones(project.type),
-    ]);
+  const [photos, documents, remarks, extraWork, catalog, serviceLink] = await Promise.all([
+    getPhotos(projectId),
+    getDocuments(projectId),
+    getRemarks(projectId),
+    getExtraWork(projectId),
+    getExtraWorkCatalog(),
+    getServiceLink(project.type),
+  ]);
 
   const v = project.vehicles;
   const c = project.customers;
@@ -84,9 +82,6 @@ export async function KlantDossier({ projectId }: { projectId: string }) {
 
   const lopend = projectLopend(status);
 
-  // plan van aanpak: stappen van de dienst + geaccepteerd meerwerk
-  const steps = buildPlanSteps(milestones, meerwerk);
-  const voortgang = planProgress(steps, project.current_step, !lopend);
   const toonLeenauto = lopend && !project.loaner_car && !project.loaner_car_requested_at;
   const toonTransport = lopend && !project.transport && !project.transport_requested_at;
 
@@ -101,7 +96,7 @@ export async function KlantDossier({ projectId }: { projectId: string }) {
             <h2 className="mb-4 text-lg font-bold text-jurgh-text">
               {projectTypeLabel(project.type)}
             </h2>
-            <PlanSteps steps={steps} current={project.current_step} />
+            <PlanVanAanpak text={planTekst(project.plan_text, serviceLink?.plan_text)} />
           </section>
 
           {serviceLink?.plan_url && (
@@ -505,7 +500,7 @@ export async function KlantDossier({ projectId }: { projectId: string }) {
               </div>
             </div>
 
-            <PlanProgress percent={voortgang} status={status} />
+            <StatusProgress status={status} />
 
             {/* tijdlijn: de datum die er nú toe doet, staat vooraan */}
             <div className="grid gap-3 sm:grid-cols-2">
