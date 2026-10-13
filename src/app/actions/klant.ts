@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
+import { isDemoAccount } from "@/lib/demo";
 
 // ============================================================
 // Acties die de klant zelf uitvoert in zijn dossier.
@@ -49,12 +50,22 @@ export async function requestCatalogItem(formData: FormData) {
 /**
  * Welkomstscherm afvinken. 0 → eerste keer, 1 → tweede keer, daarna niets.
  * De klant mag zijn eigen profiel bijwerken (RLS: profiles_self_update).
+ * Een demo-account slaat de tweede keer over: dat ziet het welkomstscherm
+ * één keer per login (de login zet de teller terug op 0).
  */
 export async function markWelcomeSeen() {
   const profile = await getSessionProfile();
   if (!profile) return;
 
   const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (isDemoAccount(user?.email)) {
+    await supabase.from("profiles").update({ welcome_seen_count: 2 }).eq("id", profile.id);
+    return;
+  }
+
   const { data } = await supabase
     .from("profiles")
     .select("welcome_seen_count")

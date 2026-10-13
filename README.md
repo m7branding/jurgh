@@ -44,7 +44,8 @@ drie testaccounts mét demo-dossier. Je mag het veilig opnieuw draaien.
 > volgorde: `migrations/0001_init.sql` → `0002_rls.sql` → `0003_storage.sql` →
 > `0004_vehicle_photos.sql` → `0005_extra_work.sql` → `0006_workflow_extensions.sql`
 > → `0007_project_types_plate.sql` → `0008_offorte.sql` → `0009_publiceren.sql`
-> → `0010_klantdossier.sql` → `0011_plan_van_aanpak.sql` → `0012_foto_rechten.sql` → `seed.sql`.
+> → `0010_klantdossier.sql` → `0011_plan_van_aanpak.sql` → `0012_foto_rechten.sql`
+> → `0013_rechten_aanscherpen.sql` → `seed.sql`.
 
 Testaccounts (wachtwoord voor alle: `JurghTest123!`):
 
@@ -90,6 +91,8 @@ paperclip de voorbeeld-offerte uit `public/voorbeeld/`. Inloggen met `demo@jurgh
 wachtwoord, zodat je het kunt delen zonder dat van de admin- en
 medewerkeraccounts weg te geven. Opnieuw draaien zet het dossier terug in de
 beginstand (datums schuiven mee met vandaag). Vereist migratie 0012.
+Het welkomstscherm komt bij elke login met het demo-account terug; welke
+accounts als demo gelden staat in `src/lib/demo.ts`.
 
 ### 2. App online zetten via Netlify
 1. Koppel deze GitHub-repo in Netlify ("Import from Git"). Netlify draait zelf

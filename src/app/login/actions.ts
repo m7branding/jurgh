@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { homePathForRole } from "@/lib/auth";
 import type { Role } from "@/lib/constants";
+import { isDemoAccount } from "@/lib/demo";
 
 export async function signIn(_prev: unknown, formData: FormData) {
   const email = String(formData.get("email") || "").trim();
@@ -32,6 +33,11 @@ export async function signIn(_prev: unknown, formData: FormData) {
       .eq("id", user.id)
       .single();
     if (profile?.role) role = profile.role as Role;
+
+    // demo-account: bij elke login weer het welkomstscherm van de eerste keer
+    if (isDemoAccount(user.email)) {
+      await supabase.from("profiles").update({ welcome_seen_count: 0 }).eq("id", user.id);
+    }
   }
 
   redirect(homePathForRole(role));
